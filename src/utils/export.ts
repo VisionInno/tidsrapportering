@@ -3,6 +3,7 @@ import Papa from 'papaparse'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import type { TimeEntry, Project } from '@/types'
+import { formatTimeInterval } from './time'
 
 interface ExportData {
   entries: TimeEntry[]
@@ -57,13 +58,14 @@ export function exportToPDF(data: ExportData): void {
 
   // Table header
   let y = 75
-  doc.setFontSize(10)
+  doc.setFontSize(9)
   doc.setFont('helvetica', 'bold')
   doc.text('Datum', 20, y)
-  doc.text('Projekt', 45, y)
-  doc.text('Beskrivning', 85, y)
-  doc.text('Tim', 145, y)
-  doc.text('Summa', 165, y)
+  doc.text('Tid', 42, y)
+  doc.text('Projekt', 75, y)
+  doc.text('Beskrivning', 110, y)
+  doc.text('Tim', 165, y)
+  doc.text('Summa', 180, y)
 
   // Table rows
   doc.setFont('helvetica', 'normal')
@@ -75,13 +77,19 @@ export function exportToPDF(data: ExportData): void {
       y = 20
     }
 
+    // Format time intervals
+    const timeStr = entry.timeIntervals && entry.timeIntervals.length > 0
+      ? entry.timeIntervals.map(formatTimeInterval).join(', ')
+      : '-'
+
     doc.text(entry.date, 20, y)
-    doc.text((projectMap.get(entry.projectId) || 'Okänt').substring(0, 15), 45, y)
-    doc.text(entry.description.substring(0, 25), 85, y)
-    doc.text(entry.hours.toFixed(1), 145, y)
+    doc.text(timeStr.substring(0, 18), 42, y)
+    doc.text((projectMap.get(entry.projectId) || 'Okänt').substring(0, 15), 75, y)
+    doc.text(entry.description.substring(0, 22), 110, y)
+    doc.text(entry.hours.toFixed(1), 165, y)
     doc.text(
       entry.billable ? `${(entry.hours * (entry.hourlyRate || 0)).toFixed(0)} kr` : '-',
-      165,
+      180,
       y
     )
     y += 6
