@@ -1,6 +1,7 @@
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import type { TimeEntry, Project } from '@/types'
+import { formatTimeInterval } from '@/utils/time'
 
 interface TimeEntryListProps {
   entries: TimeEntry[]
@@ -33,6 +34,9 @@ export function TimeEntryList({ entries, projects, onDelete }: TimeEntryListProp
               Datum
             </th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Tid
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Projekt
             </th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -56,6 +60,22 @@ export function TimeEntryList({ entries, projects, onDelete }: TimeEntryListProp
               <tr key={entry.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                   {format(new Date(entry.date), 'd MMM', { locale: sv })}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-500">
+                  {entry.timeIntervals && entry.timeIntervals.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {entry.timeIntervals.map((interval, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-block px-1.5 py-0.5 bg-gray-100 rounded text-xs"
+                        >
+                          {formatTimeInterval(interval)}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    '-'
+                  )}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center">
