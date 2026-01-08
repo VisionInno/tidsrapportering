@@ -3,12 +3,17 @@ import { TimeEntryForm, TimeEntryList, Summary, ExportButton, ProjectManager, Qu
 import { useTimeEntries } from './hooks/useTimeEntries'
 import { useProjects } from './hooks/useProjects'
 import { useActiveTimer } from './hooks/useActiveTimer'
+import { useMigration } from './hooks/useMigration'
 import type { ViewMode } from './types'
 
+type Tab = 'register' | 'overview'
+
 function App() {
+  const { migrating, migrationComplete } = useMigration()
+  const [activeTab, setActiveTab] = useState<Tab>('register')
   const [viewMode, setViewMode] = useState<ViewMode>('week')
-  const { entries, addEntry, deleteEntry } = useTimeEntries()
-  const { projects, addProject, updateProject, deleteProject } = useProjects()
+  const { entries, addEntry, deleteEntry, loading: entriesLoading } = useTimeEntries()
+  const { projects, addProject, updateProject, deleteProject, loading: projectsLoading } = useProjects()
 
   const {
     activeTimer,
@@ -18,6 +23,20 @@ function App() {
     stopTimer,
     updateDescription,
   } = useActiveTimer({ onEntryCreated: addEntry })
+
+  // Show loading screen while migrating or loading data
+  if (migrating || !migrationComplete || entriesLoading || projectsLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">
+            {migrating ? 'Migrerar data till ny databas...' : 'Laddar...'}
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -43,35 +62,64 @@ function App() {
               onUpdate={updateProject}
               onDelete={deleteProject}
             />
-            <ExportButton entries={entries} projects={projects} />
+            {activeTab === 'overview' && (
+              <ExportButton entries={entries} projects={projects} />
+            )}
           </div>
+        </div>
+
+        {/* Tab navigation */}
+        <div className="max-w-6xl mx-auto px-4">
+          <nav className="flex gap-1 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('register')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'register'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Registrera tid
+            </button>
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'overview'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Översikt
+            </button>
+          </nav>
         </div>
       </header>
 
       {/* Main content */}
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Quick Timer - Top 4 projects */}
-        <div className="mb-8">
-          <QuickTimer
-            projects={projects}
-            entries={entries}
-            activeTimer={activeTimer}
-            elapsedFormatted={elapsedFormatted}
-            isOverEightHours={isOverEightHours}
-            onStart={startTimer}
-            onStop={() => stopTimer(false)}
-            onDescriptionChange={updateDescription}
-          />
-        </div>
+        {activeTab === 'register' ? (
+          /* Register tab - QuickTimer and TimeEntryForm */
+          <div className="space-y-8">
+            {/* Quick Timer - Top 4 projects */}
+            <QuickTimer
+              projects={projects}
+              entries={entries}
+              activeTimer={activeTimer}
+              elapsedFormatted={elapsedFormatted}
+              isOverEightHours={isOverEightHours}
+              onStart={startTimer}
+              onStop={() => stopTimer(false)}
+              onDescriptionChange={updateDescription}
+            />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left column - Entry form */}
-          <div className="lg:col-span-1">
-            <TimeEntryForm projects={projects} onSubmit={addEntry} />
+            {/* Manual entry form */}
+            <div className="max-w-xl">
+              <TimeEntryForm projects={projects} onSubmit={addEntry} />
+            </div>
           </div>
-
-          {/* Right column - Summary and list */}
-          <div className="lg:col-span-2 space-y-6">
+        ) : (
+          /* Overview tab - Summary, charts, and entry list */
+          <div className="space-y-6">
             {/* View mode toggle */}
             <div className="flex items-center gap-2">
               {(['day', 'week', 'month'] as ViewMode[]).map((mode) => (
@@ -95,7 +143,7 @@ function App() {
             {/* Entry list */}
             <TimeEntryList entries={entries} projects={projects} onDelete={deleteEntry} />
           </div>
-        </div>
+        )}
       </main>
 
       {/* Footer */}

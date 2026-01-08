@@ -95,3 +95,30 @@ export function saveActiveTimer(timer: ActiveTimer | null): void {
 export function clearActiveTimer(): void {
   localStorage.removeItem(STORAGE_KEYS.ACTIVE_TIMER)
 }
+
+// Migration helpers
+export function hasLocalStorageData(): boolean {
+  return (
+    localStorage.getItem(STORAGE_KEYS.TIME_ENTRIES) !== null ||
+    localStorage.getItem(STORAGE_KEYS.PROJECTS) !== null ||
+    localStorage.getItem(STORAGE_KEYS.ACTIVE_TIMER) !== null
+  )
+}
+
+export function getAllLocalStorageData(): {
+  entries: TimeEntry[]
+  projects: Project[]
+  timer: ActiveTimer | null
+} {
+  return {
+    entries: getTimeEntries(),
+    projects: getProjects(),
+    timer: getActiveTimer(),
+  }
+}
+
+export function clearAllLocalStorage(): void {
+  localStorage.removeItem(STORAGE_KEYS.TIME_ENTRIES)
+  localStorage.removeItem(STORAGE_KEYS.PROJECTS)
+  localStorage.removeItem(STORAGE_KEYS.ACTIVE_TIMER)
+}

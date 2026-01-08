@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import type { ActiveTimer, TimeEntry } from '@/types'
 import * as storage from '@/utils/storage'
 import { calculateIntervalHours, getCurrentTime } from '@/utils/time'
+import { isElectron, getAPI } from '@/api'
 
 const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000
@@ -20,11 +21,23 @@ export function useActiveTimer({ onEntryCreated }: UseActiveTimerOptions) {
 
   // Load active timer from storage on mount
   useEffect(() => {
-    const saved = storage.getActiveTimer()
-    if (saved) {
-      setActiveTimer(saved)
-      setWarningShown(saved.warningShown || false)
+    async function loadTimer() {
+      if (isElectron()) {
+        const api = getAPI()
+        const saved = await api.timer.get()
+        if (saved) {
+          setActiveTimer(saved)
+          setWarningShown(saved.warningShown || false)
+        }
+      } else {
+        const saved = storage.getActiveTimer()
+        if (saved) {
+          setActiveTimer(saved)
+          setWarningShown(saved.warningShown || false)
+        }
+      }
     }
+    loadTimer()
   }, [])
 
   // Update elapsed time every second
@@ -49,9 +62,31 @@ export function useActiveTimer({ onEntryCreated }: UseActiveTimerOptions) {
     }
   }, [activeTimer])
 
+  // Helper to save timer
+  const saveTimer = useCallback(async (timer: ActiveTimer | null) => {
+    if (isElectron()) {
+      await getAPI().timer.save(timer)
+    } else {
+      if (timer) {
+        storage.saveActiveTimer(timer)
+      } else {
+        storage.clearActiveTimer()
+      }
+    }
+  }, [])
+
+  // Helper to clear timer
+  const clearTimer = useCallback(async () => {
+    if (isElectron()) {
+      await getAPI().timer.clear()
+    } else {
+      storage.clearActiveTimer()
+    }
+  }, [])
+
   // Helper function to stop timer and create entry
   const createEntryAndClear = useCallback(
-    (timer: ActiveTimer, autoStopped: boolean) => {
+    async (timer: ActiveTimer, autoStopped: boolean) => {
       const start = new Date(timer.startTime)
       const endTime = getCurrentTime()
 
@@ -77,12 +112,12 @@ export function useActiveTimer({ onEntryCreated }: UseActiveTimerOptions) {
         timeIntervals: [{ startTime, endTime }],
       })
 
-      storage.clearActiveTimer()
+      await clearTimer()
       setActiveTimer(null)
       setElapsedMs(0)
       setWarningShown(false)
     },
-    []
+    [clearTimer]
   )
 
   // Check for 8h warning and 12h auto-stop
@@ -93,7 +128,7 @@ export function useActiveTimer({ onEntryCreated }: UseActiveTimerOptions) {
     if (elapsedMs >= EIGHT_HOURS_MS && !warningShown) {
       setWarningShown(true)
       const updated = { ...activeTimer, warningShown: true }
-      storage.saveActiveTimer(updated)
+      saveTimer(updated)
       setActiveTimer(updated)
     }
 
@@ -101,17 +136,14 @@ export function useActiveTimer({ onEntryCreated }: UseActiveTimerOptions) {
     if (elapsedMs >= TWELVE_HOURS_MS) {
       createEntryAndClear(activeTimer, true)
     }
-  }, [elapsedMs, activeTimer, warningShown, createEntryAndClear])
+  }, [elapsedMs, activeTimer, warningShown, createEntryAndClear, saveTimer])
 
   const startTimer = useCallback(
-    (projectId: string) => {
+    async (projectId: string) => {
       // If another timer is running, stop it first
-      setActiveTimer((current) => {
-        if (current && current.projectId !== projectId) {
-          createEntryAndClear(current, false)
-        }
-        return null
-      })
+      if (activeTimer && activeTimer.projectId !== projectId) {
+        await createEntryAndClear(activeTimer, false)
+      }
 
       const newTimer: ActiveTimer = {
         projectId,
@@ -119,32 +151,32 @@ export function useActiveTimer({ onEntryCreated }: UseActiveTimerOptions) {
         description: '',
       }
 
-      storage.saveActiveTimer(newTimer)
+      await saveTimer(newTimer)
       setActiveTimer(newTimer)
       setWarningShown(false)
       setElapsedMs(0)
     },
-    [createEntryAndClear]
+    [activeTimer, createEntryAndClear, saveTimer]
   )
 
   const stopTimer = useCallback(
-    (autoStopped = false) => {
+    async (autoStopped = false) => {
       if (activeTimer) {
-        createEntryAndClear(activeTimer, autoStopped)
+        await createEntryAndClear(activeTimer, autoStopped)
       }
     },
     [activeTimer, createEntryAndClear]
   )
 
   const updateDescription = useCallback(
-    (description: string) => {
+    async (description: string) => {
       if (activeTimer) {
         const updated = { ...activeTimer, description }
-        storage.saveActiveTimer(updated)
+        await saveTimer(updated)
         setActiveTimer(updated)
       }
     },
-    [activeTimer]
+    [activeTimer, saveTimer]
   )
 
   const isTimerRunning = useCallback(

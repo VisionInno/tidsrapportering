@@ -2,40 +2,67 @@ import { useState, useEffect, useCallback } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { TimeEntry } from '@/types'
 import * as storage from '@/utils/storage'
+import { isElectron, getAPI } from '@/api'
 
 export function useTimeEntries() {
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setEntries(storage.getTimeEntries())
-    setLoading(false)
+    async function loadEntries() {
+      if (isElectron()) {
+        const api = getAPI()
+        const dbEntries = await api.entries.getAll()
+        setEntries(dbEntries)
+      } else {
+        setEntries(storage.getTimeEntries())
+      }
+      setLoading(false)
+    }
+    loadEntries()
   }, [])
 
   const addEntry = useCallback(
-    (entry: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'>) => {
+    async (entry: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'>) => {
       const newEntry: TimeEntry = {
         ...entry,
         id: uuidv4(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
-      storage.addTimeEntry(newEntry)
+
+      if (isElectron()) {
+        await getAPI().entries.add(newEntry)
+      } else {
+        storage.addTimeEntry(newEntry)
+      }
       setEntries((prev) => [...prev, newEntry])
       return newEntry
     },
     []
   )
 
-  const updateEntry = useCallback((id: string, updates: Partial<TimeEntry>) => {
-    storage.updateTimeEntry(id, updates)
+  const updateEntry = useCallback(async (id: string, updates: Partial<TimeEntry>) => {
+    if (isElectron()) {
+      const currentEntries = await getAPI().entries.getAll()
+      const entry = currentEntries.find((e) => e.id === id)
+      if (entry) {
+        await getAPI().entries.update({ ...entry, ...updates, updatedAt: new Date().toISOString() })
+      }
+    } else {
+      storage.updateTimeEntry(id, updates)
+    }
     setEntries((prev) =>
       prev.map((e) => (e.id === id ? { ...e, ...updates, updatedAt: new Date().toISOString() } : e))
     )
   }, [])
 
-  const deleteEntry = useCallback((id: string) => {
-    storage.deleteTimeEntry(id)
+  const deleteEntry = useCallback(async (id: string) => {
+    if (isElectron()) {
+      await getAPI().entries.delete(id)
+    } else {
+      storage.deleteTimeEntry(id)
+    }
     setEntries((prev) => prev.filter((e) => e.id !== id))
   }, [])
 
