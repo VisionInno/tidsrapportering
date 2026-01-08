@@ -90,7 +90,7 @@ export function TimeEntryList({ entries, projects, onDelete }: TimeEntryListProp
                   {entry.description || '-'}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
-                  {entry.hours.toFixed(1)}
+                  {entry.hours.toFixed(2)}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-right">
                   {entry.billable ? (

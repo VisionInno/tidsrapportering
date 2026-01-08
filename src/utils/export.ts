@@ -47,17 +47,13 @@ export function exportToPDF(data: ExportData): void {
 
   // Summary
   const totalHours = data.entries.reduce((sum, e) => sum + e.hours, 0)
-  const billableHours = data.entries.filter((e) => e.billable).reduce((sum, e) => sum + e.hours, 0)
-  const totalBillable = data.entries
-    .filter((e) => e.billable)
-    .reduce((sum, e) => sum + e.hours * (e.hourlyRate || 0), 0)
+  const totalBillable = data.entries.reduce((sum, e) => sum + e.hours * (e.hourlyRate || 0), 0)
 
-  doc.text(`Totalt antal timmar: ${totalHours.toFixed(1)}`, 20, 45)
-  doc.text(`Fakturerbara timmar: ${billableHours.toFixed(1)}`, 20, 52)
-  doc.text(`Total fakturerbart belopp: ${totalBillable.toFixed(2)} kr`, 20, 59)
+  doc.text(`Totalt antal timmar: ${totalHours.toFixed(2)}`, 20, 45)
+  doc.text(`Att fakturera: ${totalBillable.toFixed(0)} kr`, 20, 52)
 
   // Table header
-  let y = 75
+  let y = 68
   doc.setFontSize(9)
   doc.setFont('helvetica', 'bold')
   doc.text('Datum', 20, y)
@@ -86,7 +82,7 @@ export function exportToPDF(data: ExportData): void {
     doc.text(timeStr.substring(0, 18), 42, y)
     doc.text((projectMap.get(entry.projectId) || 'Okänt').substring(0, 15), 75, y)
     doc.text(entry.description.substring(0, 22), 110, y)
-    doc.text(entry.hours.toFixed(1), 165, y)
+    doc.text(entry.hours.toFixed(2), 165, y)
     doc.text(
       entry.billable ? `${(entry.hours * (entry.hourlyRate || 0)).toFixed(0)} kr` : '-',
       180,
@@ -135,7 +131,7 @@ export function exportInvoicePDF(data: ExportData): void {
   let totalAmount = 0
 
   doc.setFontSize(14)
-  doc.text(`Totalt antal timmar: ${totalHours.toFixed(1)}`, 20, 45)
+  doc.text(`Totalt antal timmar: ${totalHours.toFixed(2)}`, 20, 45)
 
   // Table header
   let y = 65
@@ -167,7 +163,7 @@ export function exportInvoicePDF(data: ExportData): void {
     totalAmount += amount
 
     doc.text(projectName.substring(0, 35), 20, y)
-    doc.text(totals.hours.toFixed(1), 100, y)
+    doc.text(totals.hours.toFixed(2), 100, y)
     doc.text(totals.rate > 0 ? `${totals.rate.toFixed(0)} kr` : '-', 130, y)
     doc.text(totals.rate > 0 ? `${amount.toFixed(0)} kr` : '-', 160, y)
     y += 8
@@ -181,7 +177,7 @@ export function exportInvoicePDF(data: ExportData): void {
 
   doc.setFont('helvetica', 'bold')
   doc.text('Totalt', 20, y)
-  doc.text(totalHours.toFixed(1), 100, y)
+  doc.text(totalHours.toFixed(2), 100, y)
   doc.text('', 130, y)
   doc.text(`${totalAmount.toFixed(0)} kr`, 160, y)
 

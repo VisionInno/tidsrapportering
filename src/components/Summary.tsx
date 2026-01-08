@@ -10,10 +10,7 @@ export function Summary({ entries, projects }: SummaryProps) {
   const projectMap = new Map(projects.map((p) => [p.id, p]))
 
   const totalHours = entries.reduce((sum, e) => sum + e.hours, 0)
-  const billableHours = entries.filter((e) => e.billable).reduce((sum, e) => sum + e.hours, 0)
-  const totalBillable = entries
-    .filter((e) => e.billable)
-    .reduce((sum, e) => sum + e.hours * (e.hourlyRate || 0), 0)
+  const totalBillable = entries.reduce((sum, e) => sum + e.hours * (e.hourlyRate || 0), 0)
 
   // Hours by project for pie chart
   const hoursByProject = entries.reduce(
@@ -52,14 +49,10 @@ export function Summary({ entries, projects }: SummaryProps) {
   return (
     <div className="space-y-6">
       {/* Stats cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-500">Totalt timmar</p>
-          <p className="text-2xl font-bold text-gray-900">{totalHours.toFixed(1)}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-500">Fakturerbara timmar</p>
-          <p className="text-2xl font-bold text-green-600">{billableHours.toFixed(1)}</p>
+          <p className="text-2xl font-bold text-gray-900">{totalHours.toFixed(2)}</p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-500">Att fakturera</p>
