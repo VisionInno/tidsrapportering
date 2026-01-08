@@ -59,7 +59,7 @@ function App() {
             elapsedFormatted={elapsedFormatted}
             isOverEightHours={isOverEightHours}
             onStart={startTimer}
-            onStop={stopTimer}
+            onStop={() => stopTimer(false)}
             onDescriptionChange={updateDescription}
           />
         </div>
