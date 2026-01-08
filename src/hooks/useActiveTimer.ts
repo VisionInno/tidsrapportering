@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { ActiveTimer, TimeEntry } from '@/types'
 import * as storage from '@/utils/storage'
+import { calculateIntervalHours, getCurrentTime } from '@/utils/time'
 
 const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000
@@ -52,8 +53,13 @@ export function useActiveTimer({ onEntryCreated }: UseActiveTimerOptions) {
   const createEntryAndClear = useCallback(
     (timer: ActiveTimer, autoStopped: boolean) => {
       const start = new Date(timer.startTime)
-      const end = new Date()
-      const hours = Math.round(((end.getTime() - start.getTime()) / (1000 * 60 * 60)) * 100) / 100
+      const endTime = getCurrentTime()
+
+      // Format start time as HH:mm
+      const startTime = `${start.getHours().toString().padStart(2, '0')}:${start.getMinutes().toString().padStart(2, '0')}`
+
+      // Calculate hours with rounding to nearest 15 min
+      const hours = calculateIntervalHours(startTime, endTime)
 
       let description = timer.description
       if (autoStopped) {
@@ -68,6 +74,7 @@ export function useActiveTimer({ onEntryCreated }: UseActiveTimerOptions) {
         description,
         hours,
         billable: true,
+        timeIntervals: [{ startTime, endTime }],
       })
 
       storage.clearActiveTimer()

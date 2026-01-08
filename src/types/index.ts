@@ -1,3 +1,8 @@
+export interface TimeInterval {
+  startTime: string // HH:mm format
+  endTime: string // HH:mm format
+}
+
 export interface TimeEntry {
   id: string
   date: string // ISO date string YYYY-MM-DD
@@ -6,6 +11,7 @@ export interface TimeEntry {
   hours: number
   billable: boolean
   hourlyRate?: number
+  timeIntervals?: TimeInterval[] // Optional time intervals
   createdAt: string
   updatedAt: string
 }
