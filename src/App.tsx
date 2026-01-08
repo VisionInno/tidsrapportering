@@ -1,13 +1,23 @@
 import { useState } from 'react'
-import { TimeEntryForm, TimeEntryList, Summary, ExportButton, ProjectManager } from './components'
+import { TimeEntryForm, TimeEntryList, Summary, ExportButton, ProjectManager, QuickTimer } from './components'
 import { useTimeEntries } from './hooks/useTimeEntries'
 import { useProjects } from './hooks/useProjects'
+import { useActiveTimer } from './hooks/useActiveTimer'
 import type { ViewMode } from './types'
 
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('week')
   const { entries, addEntry, deleteEntry } = useTimeEntries()
   const { projects, addProject, updateProject, deleteProject } = useProjects()
+
+  const {
+    activeTimer,
+    elapsedFormatted,
+    isOverEightHours,
+    startTimer,
+    stopTimer,
+    updateDescription,
+  } = useActiveTimer({ onEntryCreated: addEntry })
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -40,6 +50,20 @@ function App() {
 
       {/* Main content */}
       <main className="max-w-6xl mx-auto px-4 py-8">
+        {/* Quick Timer - Top 4 projects */}
+        <div className="mb-8">
+          <QuickTimer
+            projects={projects}
+            entries={entries}
+            activeTimer={activeTimer}
+            elapsedFormatted={elapsedFormatted}
+            isOverEightHours={isOverEightHours}
+            onStart={startTimer}
+            onStop={stopTimer}
+            onDescriptionChange={updateDescription}
+          />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left column - Entry form */}
           <div className="lg:col-span-1">

@@ -48,3 +48,10 @@ export interface MonthlySummary {
 export type ViewMode = 'day' | 'week' | 'month'
 
 export type ExportFormat = 'csv' | 'pdf'
+
+export interface ActiveTimer {
+  projectId: string
+  startTime: string // ISO timestamp
+  description: string
+  warningShown?: boolean
+}

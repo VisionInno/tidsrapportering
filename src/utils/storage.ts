@@ -1,8 +1,9 @@
-import type { TimeEntry, Project } from '@/types'
+import type { TimeEntry, Project, ActiveTimer } from '@/types'
 
 const STORAGE_KEYS = {
   TIME_ENTRIES: 'tidsrapportering_entries',
   PROJECTS: 'tidsrapportering_projects',
+  ACTIVE_TIMER: 'tidsrapportering_active_timer',
 } as const
 
 export function getTimeEntries(): TimeEntry[] {
@@ -75,4 +76,22 @@ export function updateProject(id: string, updates: Partial<Project>): void {
 export function deleteProject(id: string): void {
   const projects = getProjects()
   saveProjects(projects.filter((p) => p.id !== id))
+}
+
+// Active Timer functions
+export function getActiveTimer(): ActiveTimer | null {
+  const data = localStorage.getItem(STORAGE_KEYS.ACTIVE_TIMER)
+  return data ? JSON.parse(data) : null
+}
+
+export function saveActiveTimer(timer: ActiveTimer | null): void {
+  if (timer) {
+    localStorage.setItem(STORAGE_KEYS.ACTIVE_TIMER, JSON.stringify(timer))
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.ACTIVE_TIMER)
+  }
+}
+
+export function clearActiveTimer(): void {
+  localStorage.removeItem(STORAGE_KEYS.ACTIVE_TIMER)
 }
