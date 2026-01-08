@@ -13,8 +13,6 @@ export function TimeEntryForm({ projects, onSubmit, initialDate }: TimeEntryForm
   const [projectId, setProjectId] = useState(projects[0]?.id || '')
   const [description, setDescription] = useState('')
   const [hours, setHours] = useState('')
-  const [billable, setBillable] = useState(false)
-  const [hourlyRate, setHourlyRate] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,15 +23,12 @@ export function TimeEntryForm({ projects, onSubmit, initialDate }: TimeEntryForm
       projectId,
       description,
       hours: parseFloat(hours),
-      billable,
-      hourlyRate: billable && hourlyRate ? parseFloat(hourlyRate) : undefined,
+      billable: true,
     })
 
     // Reset form
     setDescription('')
     setHours('')
-    setBillable(false)
-    setHourlyRate('')
   }
 
   const activeProjects = projects.filter((p) => p.active)
@@ -89,53 +84,22 @@ export function TimeEntryForm({ projects, onSubmit, initialDate }: TimeEntryForm
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="hours" className="block text-sm font-medium text-gray-700">
-            Timmar
-          </label>
-          <input
-            type="number"
-            id="hours"
-            value={hours}
-            onChange={(e) => setHours(e.target.value)}
-            placeholder="0.0"
-            step="0.25"
-            min="0"
-            max="24"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-          />
-        </div>
-
-        <div className="flex items-end gap-4">
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={billable}
-              onChange={(e) => setBillable(e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-            <span className="ml-2 text-sm text-gray-700">Fakturerbar</span>
-          </label>
-        </div>
+      <div>
+        <label htmlFor="hours" className="block text-sm font-medium text-gray-700">
+          Timmar
+        </label>
+        <input
+          type="number"
+          id="hours"
+          value={hours}
+          onChange={(e) => setHours(e.target.value)}
+          placeholder="0.0"
+          step="0.25"
+          min="0"
+          max="24"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+        />
       </div>
-
-      {billable && (
-        <div>
-          <label htmlFor="hourlyRate" className="block text-sm font-medium text-gray-700">
-            Timpris (kr)
-          </label>
-          <input
-            type="number"
-            id="hourlyRate"
-            value={hourlyRate}
-            onChange={(e) => setHourlyRate(e.target.value)}
-            placeholder="0"
-            min="0"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-          />
-        </div>
-      )}
 
       <button
         type="submit"

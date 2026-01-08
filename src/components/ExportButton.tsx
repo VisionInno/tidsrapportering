@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { format, subDays, startOfMonth, endOfMonth } from 'date-fns'
-import type { TimeEntry, Project, ExportFormat } from '@/types'
-import { exportToCSV, exportToPDF } from '@/utils/export'
+import type { TimeEntry, Project } from '@/types'
+import { exportToCSV, exportToPDF, exportInvoicePDF } from '@/utils/export'
+
+type ExportType = 'csv' | 'pdf' | 'invoice'
 
 interface ExportButtonProps {
   entries: TimeEntry[]
@@ -10,7 +12,7 @@ interface ExportButtonProps {
 
 export function ExportButton({ entries, projects }: ExportButtonProps) {
   const [showModal, setShowModal] = useState(false)
-  const [exportFormat, setExportFormat] = useState<ExportFormat>('csv')
+  const [exportType, setExportType] = useState<ExportType>('invoice')
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'custom'>('month')
   const [customStart, setCustomStart] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
   const [customEnd, setCustomEnd] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'))
@@ -43,10 +45,16 @@ export function ExportButton({ entries, projects }: ExportButtonProps) {
       dateRange: range,
     }
 
-    if (exportFormat === 'csv') {
-      exportToCSV(data)
-    } else {
-      exportToPDF(data)
+    switch (exportType) {
+      case 'csv':
+        exportToCSV(data)
+        break
+      case 'pdf':
+        exportToPDF(data)
+        break
+      case 'invoice':
+        exportInvoicePDF(data)
+        break
     }
 
     setShowModal(false)
@@ -76,27 +84,37 @@ export function ExportButton({ entries, projects }: ExportButtonProps) {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Format</label>
-                <div className="flex gap-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Typ av export</label>
+                <div className="space-y-2">
                   <label className="flex items-center">
                     <input
                       type="radio"
-                      value="csv"
-                      checked={exportFormat === 'csv'}
-                      onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
+                      value="invoice"
+                      checked={exportType === 'invoice'}
+                      onChange={(e) => setExportType(e.target.value as ExportType)}
                       className="text-primary-600 focus:ring-primary-500"
                     />
-                    <span className="ml-2 text-sm">CSV</span>
+                    <span className="ml-2 text-sm">Fakturaunderlag (PDF)</span>
                   </label>
                   <label className="flex items-center">
                     <input
                       type="radio"
                       value="pdf"
-                      checked={exportFormat === 'pdf'}
-                      onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
+                      checked={exportType === 'pdf'}
+                      onChange={(e) => setExportType(e.target.value as ExportType)}
                       className="text-primary-600 focus:ring-primary-500"
                     />
-                    <span className="ml-2 text-sm">PDF</span>
+                    <span className="ml-2 text-sm">Detaljerad tidsrapport (PDF)</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="csv"
+                      checked={exportType === 'csv'}
+                      onChange={(e) => setExportType(e.target.value as ExportType)}
+                      className="text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="ml-2 text-sm">CSV (för Excel)</span>
                   </label>
                 </div>
               </div>
