@@ -159,8 +159,65 @@ export function exportInvoicePDF(data: ExportData): void {
   const doc = new jsPDF()
   const projectMap = new Map(data.projects.map((p) => [p.id, p]))
 
-  // Calculate rounded totals (per project per day, then sum)
-  const { totalHours, totalBillable, hoursByProject } = calculateRoundedExportTotals(data.entries, projectMap)
+  // Group minutes by project and date
+  const minutesByProjectDate = new Map<string, Map<string, number>>()
+
+  for (const entry of data.entries) {
+    const entryMinutes = entry.timeIntervals && entry.timeIntervals.length > 0
+      ? calculateTotalMinutesFromIntervals(entry.timeIntervals)
+      : entry.hours * 60
+
+    if (!minutesByProjectDate.has(entry.projectId)) {
+      minutesByProjectDate.set(entry.projectId, new Map())
+    }
+    const projectDates = minutesByProjectDate.get(entry.projectId)!
+    const currentMinutes = projectDates.get(entry.date) || 0
+    projectDates.set(entry.date, currentMinutes + entryMinutes)
+  }
+
+  // Calculate rounded hours per project per day, and totals
+  const projectData: Array<{
+    projectId: string
+    name: string
+    rate: number
+    dailyHours: Array<{ date: string; hours: number }>
+    totalHours: number
+    totalAmount: number
+  }> = []
+
+  let grandTotalHours = 0
+  let grandTotalAmount = 0
+
+  for (const [projectId, dateMinutes] of minutesByProjectDate) {
+    const project = projectMap.get(projectId)
+    const rate = project?.defaultHourlyRate || 0
+
+    const dailyHours: Array<{ date: string; hours: number }> = []
+    let projectTotalHours = 0
+
+    // Sort dates
+    const sortedDates = Array.from(dateMinutes.keys()).sort()
+
+    for (const date of sortedDates) {
+      const minutes = dateMinutes.get(date)!
+      const roundedHours = minutesToRoundedHours(minutes)
+      dailyHours.push({ date, hours: roundedHours })
+      projectTotalHours += roundedHours
+    }
+
+    const totalAmount = projectTotalHours * rate
+    grandTotalHours += projectTotalHours
+    grandTotalAmount += totalAmount
+
+    projectData.push({
+      projectId,
+      name: project?.name || 'Okänt',
+      rate,
+      dailyHours,
+      totalHours: projectTotalHours,
+      totalAmount,
+    })
+  }
 
   // Title
   doc.setFontSize(20)
@@ -172,55 +229,68 @@ export function exportInvoicePDF(data: ExportData): void {
 
   // Total hours (rounded)
   doc.setFontSize(14)
-  doc.text(`Totalt antal timmar: ${totalHours.toFixed(2)}`, 20, 45)
+  doc.text(`Totalt antal timmar: ${grandTotalHours.toFixed(2)}`, 20, 45)
 
-  // Table header
-  let y = 65
-  doc.setFontSize(11)
-  doc.setFont('helvetica', 'bold')
-  doc.text('Projekt', 20, y)
-  doc.text('Timmar', 100, y)
-  doc.text('Timpris', 130, y)
-  doc.text('Summa', 160, y)
+  let y = 60
 
-  // Divider line
-  y += 3
-  doc.setLineWidth(0.5)
-  doc.line(20, y, 190, y)
-
-  // Table rows (using rounded hours per project)
-  doc.setFont('helvetica', 'normal')
-  y += 8
-
-  for (const [projectId, hours] of hoursByProject) {
-    if (y > 260) {
+  // Render each project with daily breakdown
+  for (const project of projectData) {
+    if (y > 240) {
       doc.addPage()
       y = 20
     }
 
-    const project = projectMap.get(projectId)
-    const projectName = project?.name || 'Okänt'
-    const rate = project?.defaultHourlyRate || 0
-    const amount = hours * rate
+    // Project header
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.text(project.name, 20, y)
+    if (project.rate > 0) {
+      doc.setFont('helvetica', 'normal')
+      doc.text(`(${project.rate.toFixed(0)} kr/h)`, 20 + doc.getTextWidth(project.name) + 3, y)
+    }
+    y += 6
 
-    doc.text(projectName.substring(0, 35), 20, y)
-    doc.text(hours.toFixed(2), 100, y)
-    doc.text(rate > 0 ? `${rate.toFixed(0)} kr` : '-', 130, y)
-    doc.text(rate > 0 ? `${amount.toFixed(0)} kr` : '-', 160, y)
-    y += 8
+    // Daily breakdown
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+
+    for (const day of project.dailyHours) {
+      if (y > 270) {
+        doc.addPage()
+        y = 20
+      }
+
+      const dateStr = format(new Date(day.date), 'd MMM (EEEE)', { locale: sv })
+      doc.text(`  ${dateStr}`, 20, y)
+      doc.text(`${day.hours.toFixed(2)} h`, 100, y)
+      y += 5
+    }
+
+    // Project subtotal
+    doc.setFont('helvetica', 'bold')
+    doc.text('  Summa:', 20, y)
+    doc.text(`${project.totalHours.toFixed(2)} h`, 100, y)
+    if (project.rate > 0) {
+      doc.text(`${project.totalAmount.toFixed(0)} kr`, 140, y)
+    }
+    y += 10
   }
 
-  // Total line
-  y += 4
+  // Grand total
+  if (y > 250) {
+    doc.addPage()
+    y = 20
+  }
+
   doc.setLineWidth(0.5)
   doc.line(20, y, 190, y)
   y += 8
 
+  doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
-  doc.text('Totalt', 20, y)
-  doc.text(totalHours.toFixed(2), 100, y)
-  doc.text('', 130, y)
-  doc.text(`${totalBillable.toFixed(0)} kr`, 160, y)
+  doc.text('TOTALT', 20, y)
+  doc.text(`${grandTotalHours.toFixed(2)} h`, 100, y)
+  doc.text(`${grandTotalAmount.toFixed(0)} kr`, 140, y)
 
   // Footer
   doc.setFont('helvetica', 'normal')

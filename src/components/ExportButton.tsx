@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { format, subDays, startOfMonth, endOfMonth } from 'date-fns'
+import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import type { TimeEntry, Project } from '@/types'
 import { exportToCSV, exportToPDF, exportInvoicePDF } from '@/utils/export'
 
@@ -13,7 +13,7 @@ interface ExportButtonProps {
 export function ExportButton({ entries, projects }: ExportButtonProps) {
   const [showModal, setShowModal] = useState(false)
   const [exportType, setExportType] = useState<ExportType>('invoice')
-  const [dateRange, setDateRange] = useState<'week' | 'month' | 'custom'>('month')
+  const [dateRange, setDateRange] = useState<'week' | 'month' | 'prevMonth' | 'custom'>('month')
   const [customStart, setCustomStart] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
   const [customEnd, setCustomEnd] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'))
 
@@ -30,6 +30,13 @@ export function ExportButton({ entries, projects }: ExportButtonProps) {
           start: format(startOfMonth(today), 'yyyy-MM-dd'),
           end: format(endOfMonth(today), 'yyyy-MM-dd'),
         }
+      case 'prevMonth': {
+        const prevMonth = subMonths(today, 1)
+        return {
+          start: format(startOfMonth(prevMonth), 'yyyy-MM-dd'),
+          end: format(endOfMonth(prevMonth), 'yyyy-MM-dd'),
+        }
+      }
       case 'custom':
         return { start: customStart, end: customEnd }
     }
@@ -123,11 +130,12 @@ export function ExportButton({ entries, projects }: ExportButtonProps) {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Period</label>
                 <select
                   value={dateRange}
-                  onChange={(e) => setDateRange(e.target.value as 'week' | 'month' | 'custom')}
+                  onChange={(e) => setDateRange(e.target.value as 'week' | 'month' | 'prevMonth' | 'custom')}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 >
                   <option value="week">Senaste 7 dagarna</option>
                   <option value="month">Denna månad</option>
+                  <option value="prevMonth">Föregående månad</option>
                   <option value="custom">Anpassad period</option>
                 </select>
               </div>
