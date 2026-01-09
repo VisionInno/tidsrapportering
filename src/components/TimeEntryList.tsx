@@ -1,7 +1,7 @@
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import type { TimeEntry, Project } from '@/types'
-import { formatTimeInterval } from '@/utils/time'
+import { formatTimeInterval, calculateTotalMinutesFromIntervals } from '@/utils/time'
 
 interface TimeEntryListProps {
   entries: TimeEntry[]
@@ -43,10 +43,7 @@ export function TimeEntryList({ entries, projects, onDelete }: TimeEntryListProp
               Beskrivning
             </th>
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Timmar
-            </th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Summa
+              Minuter
             </th>
             <th className="px-4 py-3"></th>
           </tr>
@@ -54,7 +51,10 @@ export function TimeEntryList({ entries, projects, onDelete }: TimeEntryListProp
         <tbody className="bg-white divide-y divide-gray-200">
           {sortedEntries.map((entry) => {
             const project = projectMap.get(entry.projectId)
-            const amount = entry.billable ? entry.hours * (entry.hourlyRate || 0) : 0
+            // Calculate exact minutes (not rounded)
+            const minutes = entry.timeIntervals && entry.timeIntervals.length > 0
+              ? calculateTotalMinutesFromIntervals(entry.timeIntervals)
+              : entry.hours * 60
 
             return (
               <tr key={entry.id} className="hover:bg-gray-50">
@@ -90,14 +90,7 @@ export function TimeEntryList({ entries, projects, onDelete }: TimeEntryListProp
                   {entry.description || '-'}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
-                  {entry.hours.toFixed(2)}
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-right">
-                  {entry.billable ? (
-                    <span className="text-green-600">{amount.toFixed(0)} kr</span>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
+                  {minutes}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
                   <button

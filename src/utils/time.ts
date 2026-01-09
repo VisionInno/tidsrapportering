@@ -2,16 +2,15 @@ import type { TimeInterval } from '@/types'
 
 /**
  * Rounds minutes up to nearest 15-minute interval
- * Examples: 12:51 -> 13:00, 13:01 -> 13:15, 13:16 -> 13:30
  */
 export function roundUpTo15Minutes(minutes: number): number {
   return Math.ceil(minutes / 15) * 15
 }
 
 /**
- * Calculates hours from a time interval, rounding up to nearest 15 minutes
+ * Calculates exact minutes from a time interval (no rounding)
  */
-export function calculateIntervalHours(startTime: string, endTime: string): number {
+export function calculateIntervalMinutes(startTime: string, endTime: string): number {
   const [startHour, startMin] = startTime.split(':').map(Number)
   const [endHour, endMin] = endTime.split(':').map(Number)
 
@@ -19,24 +18,45 @@ export function calculateIntervalHours(startTime: string, endTime: string): numb
   const endMinutes = endHour * 60 + endMin
 
   // Handle case where end time is before start time (crosses midnight)
-  const diffMinutes = endMinutes >= startMinutes
+  return endMinutes >= startMinutes
     ? endMinutes - startMinutes
     : (24 * 60 - startMinutes) + endMinutes
+}
 
-  // Round up to nearest 15 minutes
+/**
+ * Calculates hours from a time interval, rounding up to nearest 15 minutes
+ * @deprecated Use calculateIntervalMinutes and round at summary level instead
+ */
+export function calculateIntervalHours(startTime: string, endTime: string): number {
+  const diffMinutes = calculateIntervalMinutes(startTime, endTime)
   const roundedMinutes = roundUpTo15Minutes(diffMinutes)
-
   return roundedMinutes / 60
 }
 
 /**
- * Calculates total hours from multiple time intervals
- * Each interval is rounded up individually to nearest 15 minutes
+ * Calculates exact total minutes from multiple time intervals (no rounding)
+ */
+export function calculateTotalMinutesFromIntervals(intervals: TimeInterval[]): number {
+  return intervals.reduce((total, interval) => {
+    return total + calculateIntervalMinutes(interval.startTime, interval.endTime)
+  }, 0)
+}
+
+/**
+ * Calculates total hours from intervals, summing minutes first then rounding
  */
 export function calculateTotalHoursFromIntervals(intervals: TimeInterval[]): number {
-  return intervals.reduce((total, interval) => {
-    return total + calculateIntervalHours(interval.startTime, interval.endTime)
-  }, 0)
+  const totalMinutes = calculateTotalMinutesFromIntervals(intervals)
+  const roundedMinutes = roundUpTo15Minutes(totalMinutes)
+  return roundedMinutes / 60
+}
+
+/**
+ * Converts minutes to hours, rounding up to nearest 15 minutes
+ */
+export function minutesToRoundedHours(minutes: number): number {
+  const roundedMinutes = roundUpTo15Minutes(minutes)
+  return roundedMinutes / 60
 }
 
 /**

@@ -3,7 +3,46 @@ import Papa from 'papaparse'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import type { TimeEntry, Project } from '@/types'
-import { formatTimeInterval } from './time'
+import { formatTimeInterval, calculateTotalMinutesFromIntervals, minutesToRoundedHours } from './time'
+
+/**
+ * Calculate rounded hours per project per day, then sum totals
+ * This is the core rounding logic used across the app
+ */
+function calculateRoundedExportTotals(entries: TimeEntry[], projectMap: Map<string, Project>) {
+  // Group minutes by project+date
+  const minutesByProjectDate = new Map<string, number>()
+
+  for (const entry of entries) {
+    const key = `${entry.projectId}|${entry.date}`
+    const currentMinutes = minutesByProjectDate.get(key) || 0
+    const entryMinutes = entry.timeIntervals && entry.timeIntervals.length > 0
+      ? calculateTotalMinutesFromIntervals(entry.timeIntervals)
+      : entry.hours * 60
+    minutesByProjectDate.set(key, currentMinutes + entryMinutes)
+  }
+
+  // Round each project+date total and aggregate
+  let totalHours = 0
+  const hoursByProject = new Map<string, number>()
+  let totalBillable = 0
+
+  for (const [key, minutes] of minutesByProjectDate.entries()) {
+    const [projectId] = key.split('|')
+    const roundedHours = minutesToRoundedHours(minutes)
+    const project = projectMap.get(projectId)
+    const rate = project?.defaultHourlyRate || 0
+
+    totalHours += roundedHours
+    totalBillable += roundedHours * rate
+
+    // Aggregate by project
+    const currentProjectHours = hoursByProject.get(projectId) || 0
+    hoursByProject.set(projectId, currentProjectHours + roundedHours)
+  }
+
+  return { totalHours, totalBillable, hoursByProject }
+}
 
 interface ExportData {
   entries: TimeEntry[]
@@ -12,17 +51,28 @@ interface ExportData {
 }
 
 export function exportToCSV(data: ExportData): void {
-  const projectMap = new Map(data.projects.map((p) => [p.id, p.name]))
+  const projectMap = new Map(data.projects.map((p) => [p.id, p]))
 
-  const rows = data.entries.map((entry) => ({
-    Datum: entry.date,
-    Projekt: projectMap.get(entry.projectId) || 'Okänt',
-    Beskrivning: entry.description,
-    Timmar: entry.hours,
-    Fakturerbar: entry.billable ? 'Ja' : 'Nej',
-    Timpris: entry.hourlyRate || 0,
-    Summa: entry.billable ? (entry.hours * (entry.hourlyRate || 0)).toFixed(2) : '0',
-  }))
+  // Calculate exact minutes per entry (not rounded)
+  const getEntryMinutes = (entry: TimeEntry): number => {
+    if (entry.timeIntervals && entry.timeIntervals.length > 0) {
+      return calculateTotalMinutesFromIntervals(entry.timeIntervals)
+    }
+    return entry.hours * 60
+  }
+
+  const rows = data.entries.map((entry) => {
+    const project = projectMap.get(entry.projectId)
+    const minutes = getEntryMinutes(entry)
+    return {
+      Datum: entry.date,
+      Projekt: project?.name || 'Okänt',
+      Beskrivning: entry.description,
+      Minuter: minutes,
+      Fakturerbar: entry.billable ? 'Ja' : 'Nej',
+      Timpris: entry.hourlyRate || 0,
+    }
+  })
 
   const csv = Papa.unparse(rows, {
     delimiter: ';',
@@ -35,7 +85,18 @@ export function exportToCSV(data: ExportData): void {
 
 export function exportToPDF(data: ExportData): void {
   const doc = new jsPDF()
-  const projectMap = new Map(data.projects.map((p) => [p.id, p.name]))
+  const projectMap = new Map(data.projects.map((p) => [p.id, p]))
+
+  // Calculate exact minutes per entry (not rounded)
+  const getEntryMinutes = (entry: TimeEntry): number => {
+    if (entry.timeIntervals && entry.timeIntervals.length > 0) {
+      return calculateTotalMinutesFromIntervals(entry.timeIntervals)
+    }
+    return entry.hours * 60
+  }
+
+  // Calculate rounded totals (per project per day, then sum)
+  const { totalHours, totalBillable } = calculateRoundedExportTotals(data.entries, projectMap)
 
   // Title
   doc.setFontSize(20)
@@ -45,10 +106,7 @@ export function exportToPDF(data: ExportData): void {
   doc.setFontSize(12)
   doc.text(`Period: ${data.dateRange.start} - ${data.dateRange.end}`, 20, 30)
 
-  // Summary
-  const totalHours = data.entries.reduce((sum, e) => sum + e.hours, 0)
-  const totalBillable = data.entries.reduce((sum, e) => sum + e.hours * (e.hourlyRate || 0), 0)
-
+  // Summary (using rounded totals)
   doc.text(`Totalt antal timmar: ${totalHours.toFixed(2)}`, 20, 45)
   doc.text(`Att fakturera: ${totalBillable.toFixed(0)} kr`, 20, 52)
 
@@ -60,8 +118,7 @@ export function exportToPDF(data: ExportData): void {
   doc.text('Tid', 42, y)
   doc.text('Projekt', 75, y)
   doc.text('Beskrivning', 110, y)
-  doc.text('Tim', 165, y)
-  doc.text('Summa', 180, y)
+  doc.text('Min', 165, y)
 
   // Table rows
   doc.setFont('helvetica', 'normal')
@@ -77,17 +134,13 @@ export function exportToPDF(data: ExportData): void {
     const timeStr = entry.timeIntervals && entry.timeIntervals.length > 0
       ? entry.timeIntervals.map(formatTimeInterval).join(', ')
       : '-'
+    const minutes = getEntryMinutes(entry)
 
     doc.text(entry.date, 20, y)
     doc.text(timeStr.substring(0, 18), 42, y)
-    doc.text((projectMap.get(entry.projectId) || 'Okänt').substring(0, 15), 75, y)
+    doc.text((projectMap.get(entry.projectId)?.name || 'Okänt').substring(0, 15), 75, y)
     doc.text(entry.description.substring(0, 22), 110, y)
-    doc.text(entry.hours.toFixed(2), 165, y)
-    doc.text(
-      entry.billable ? `${(entry.hours * (entry.hourlyRate || 0)).toFixed(0)} kr` : '-',
-      180,
-      y
-    )
+    doc.text(minutes.toString(), 165, y)
     y += 6
   }
 
@@ -106,6 +159,9 @@ export function exportInvoicePDF(data: ExportData): void {
   const doc = new jsPDF()
   const projectMap = new Map(data.projects.map((p) => [p.id, p]))
 
+  // Calculate rounded totals (per project per day, then sum)
+  const { totalHours, totalBillable, hoursByProject } = calculateRoundedExportTotals(data.entries, projectMap)
+
   // Title
   doc.setFontSize(20)
   doc.text('Fakturaunderlag', 20, 20)
@@ -114,22 +170,7 @@ export function exportInvoicePDF(data: ExportData): void {
   doc.setFontSize(12)
   doc.text(`Period: ${data.dateRange.start} - ${data.dateRange.end}`, 20, 30)
 
-  // Calculate totals per project
-  const projectTotals = new Map<string, { hours: number; rate: number }>()
-
-  for (const entry of data.entries) {
-    const current = projectTotals.get(entry.projectId) || { hours: 0, rate: 0 }
-    const project = projectMap.get(entry.projectId)
-    projectTotals.set(entry.projectId, {
-      hours: current.hours + entry.hours,
-      rate: project?.defaultHourlyRate || 0,
-    })
-  }
-
-  // Total hours
-  const totalHours = data.entries.reduce((sum, e) => sum + e.hours, 0)
-  let totalAmount = 0
-
+  // Total hours (rounded)
   doc.setFontSize(14)
   doc.text(`Totalt antal timmar: ${totalHours.toFixed(2)}`, 20, 45)
 
@@ -147,11 +188,11 @@ export function exportInvoicePDF(data: ExportData): void {
   doc.setLineWidth(0.5)
   doc.line(20, y, 190, y)
 
-  // Table rows
+  // Table rows (using rounded hours per project)
   doc.setFont('helvetica', 'normal')
   y += 8
 
-  for (const [projectId, totals] of projectTotals) {
+  for (const [projectId, hours] of hoursByProject) {
     if (y > 260) {
       doc.addPage()
       y = 20
@@ -159,13 +200,13 @@ export function exportInvoicePDF(data: ExportData): void {
 
     const project = projectMap.get(projectId)
     const projectName = project?.name || 'Okänt'
-    const amount = totals.hours * totals.rate
-    totalAmount += amount
+    const rate = project?.defaultHourlyRate || 0
+    const amount = hours * rate
 
     doc.text(projectName.substring(0, 35), 20, y)
-    doc.text(totals.hours.toFixed(2), 100, y)
-    doc.text(totals.rate > 0 ? `${totals.rate.toFixed(0)} kr` : '-', 130, y)
-    doc.text(totals.rate > 0 ? `${amount.toFixed(0)} kr` : '-', 160, y)
+    doc.text(hours.toFixed(2), 100, y)
+    doc.text(rate > 0 ? `${rate.toFixed(0)} kr` : '-', 130, y)
+    doc.text(rate > 0 ? `${amount.toFixed(0)} kr` : '-', 160, y)
     y += 8
   }
 
@@ -179,7 +220,7 @@ export function exportInvoicePDF(data: ExportData): void {
   doc.text('Totalt', 20, y)
   doc.text(totalHours.toFixed(2), 100, y)
   doc.text('', 130, y)
-  doc.text(`${totalAmount.toFixed(0)} kr`, 160, y)
+  doc.text(`${totalBillable.toFixed(0)} kr`, 160, y)
 
   // Footer
   doc.setFont('helvetica', 'normal')

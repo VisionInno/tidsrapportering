@@ -1,5 +1,5 @@
 import type { TimeEntry, Project } from '@/types'
-import { formatTimeInterval } from '@/utils/time'
+import { formatTimeInterval, calculateTotalMinutesFromIntervals, minutesToRoundedHours } from '@/utils/time'
 
 interface TodayEntriesProps {
   entries: TimeEntry[]
@@ -22,8 +22,29 @@ export function TodayEntries({ entries, projects, onDelete }: TodayEntriesProps)
     return a.createdAt.localeCompare(b.createdAt)
   })
 
-  // Calculate total hours
-  const totalHours = todayEntries.reduce((sum, e) => sum + e.hours, 0)
+  // Calculate minutes per project, then round each project total
+  const minutesByProject = new Map<string, number>()
+  for (const entry of todayEntries) {
+    const currentMinutes = minutesByProject.get(entry.projectId) || 0
+    const entryMinutes = entry.timeIntervals && entry.timeIntervals.length > 0
+      ? calculateTotalMinutesFromIntervals(entry.timeIntervals)
+      : entry.hours * 60 // fallback to stored hours if no intervals
+    minutesByProject.set(entry.projectId, currentMinutes + entryMinutes)
+  }
+
+  // Sum rounded hours per project to get total
+  let totalHours = 0
+  for (const minutes of minutesByProject.values()) {
+    totalHours += minutesToRoundedHours(minutes)
+  }
+
+  // Calculate display minutes per entry (exact, no rounding)
+  const getEntryMinutes = (entry: TimeEntry): number => {
+    if (entry.timeIntervals && entry.timeIntervals.length > 0) {
+      return calculateTotalMinutesFromIntervals(entry.timeIntervals)
+    }
+    return entry.hours * 60
+  }
 
   if (sortedEntries.length === 0) {
     return (
@@ -49,6 +70,7 @@ export function TodayEntries({ entries, projects, onDelete }: TodayEntriesProps)
           const timeStr = entry.timeIntervals && entry.timeIntervals.length > 0
             ? entry.timeIntervals.map(formatTimeInterval).join(', ')
             : null
+          const minutes = getEntryMinutes(entry)
 
           return (
             <div
@@ -80,10 +102,10 @@ export function TodayEntries({ entries, projects, onDelete }: TodayEntriesProps)
                 )}
               </div>
 
-              {/* Hours */}
+              {/* Minutes (exact, not rounded) */}
               <div className="w-16 text-right flex-shrink-0">
                 <span className="text-sm font-medium text-gray-700">
-                  {entry.hours.toFixed(2)} h
+                  {minutes} min
                 </span>
               </div>
 
@@ -101,6 +123,31 @@ export function TodayEntries({ entries, projects, onDelete }: TodayEntriesProps)
           )
         })}
       </div>
+
+      {/* Show per-project totals if multiple projects */}
+      {minutesByProject.size > 1 && (
+        <div className="mt-4 pt-3 border-t border-gray-200">
+          <p className="text-xs text-gray-500 mb-2">Per projekt (avrundat):</p>
+          <div className="space-y-1">
+            {Array.from(minutesByProject.entries()).map(([projectId, minutes]) => {
+              const project = projectMap.get(projectId)
+              const roundedHours = minutesToRoundedHours(minutes)
+              return (
+                <div key={projectId} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: project?.color || '#6b7280' }}
+                    />
+                    <span className="text-gray-600">{project?.name || 'Okänt'}</span>
+                  </div>
+                  <span className="text-gray-700 font-medium">{roundedHours.toFixed(2)} h</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

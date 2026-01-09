@@ -1,32 +1,63 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import type { TimeEntry, Project } from '@/types'
+import { calculateTotalMinutesFromIntervals, minutesToRoundedHours } from '@/utils/time'
 
 interface SummaryProps {
   entries: TimeEntry[]
   projects: Project[]
 }
 
+// Calculate rounded hours per project per day, then sum
+function calculateRoundedTotals(entries: TimeEntry[], projectMap: Map<string, Project>) {
+  // Group minutes by project+date
+  const minutesByProjectDate = new Map<string, number>()
+
+  for (const entry of entries) {
+    const key = `${entry.projectId}|${entry.date}`
+    const currentMinutes = minutesByProjectDate.get(key) || 0
+    const entryMinutes = entry.timeIntervals && entry.timeIntervals.length > 0
+      ? calculateTotalMinutesFromIntervals(entry.timeIntervals)
+      : entry.hours * 60
+    minutesByProjectDate.set(key, currentMinutes + entryMinutes)
+  }
+
+  // Round each project+date total and aggregate
+  let totalHours = 0
+  const hoursByProject = new Map<string, number>()
+  const hoursByDate = new Map<string, number>()
+  let totalBillable = 0
+
+  for (const [key, minutes] of minutesByProjectDate.entries()) {
+    const [projectId, date] = key.split('|')
+    const roundedHours = minutesToRoundedHours(minutes)
+    const project = projectMap.get(projectId)
+    const rate = project?.defaultHourlyRate || 0
+
+    totalHours += roundedHours
+    totalBillable += roundedHours * rate
+
+    // Aggregate by project
+    const currentProjectHours = hoursByProject.get(projectId) || 0
+    hoursByProject.set(projectId, currentProjectHours + roundedHours)
+
+    // Aggregate by date
+    const currentDateHours = hoursByDate.get(date) || 0
+    hoursByDate.set(date, currentDateHours + roundedHours)
+  }
+
+  return { totalHours, totalBillable, hoursByProject, hoursByDate }
+}
+
 export function Summary({ entries, projects }: SummaryProps) {
   const projectMap = new Map(projects.map((p) => [p.id, p]))
 
-  const totalHours = entries.reduce((sum, e) => sum + e.hours, 0)
-  const totalBillable = entries.reduce((sum, e) => sum + e.hours * (e.hourlyRate || 0), 0)
+  const { totalHours, totalBillable, hoursByProject, hoursByDate } = calculateRoundedTotals(entries, projectMap)
 
-  // Hours by project for pie chart
-  const hoursByProject = entries.reduce(
-    (acc, entry) => {
-      const project = projectMap.get(entry.projectId)
-      const name = project?.name || 'Okänt'
-      acc[name] = (acc[name] || 0) + entry.hours
-      return acc
-    },
-    {} as Record<string, number>
-  )
-
-  const pieData = Object.entries(hoursByProject).map(([name, hours]) => {
-    const project = projects.find((p) => p.name === name)
+  // Prepare pie chart data
+  const pieData = Array.from(hoursByProject.entries()).map(([projectId, hours]) => {
+    const project = projectMap.get(projectId)
     return {
-      name,
+      name: project?.name || 'Okänt',
       value: hours,
       color: project?.color || '#6b7280',
     }
@@ -40,8 +71,7 @@ export function Summary({ entries, projects }: SummaryProps) {
   })
 
   const barData = last7Days.map((date) => {
-    const dayEntries = entries.filter((e) => e.date === date)
-    const hours = dayEntries.reduce((sum, e) => sum + e.hours, 0)
+    const hours = hoursByDate.get(date) || 0
     const dayName = new Date(date).toLocaleDateString('sv-SE', { weekday: 'short' })
     return { name: dayName, timmar: hours }
   })
