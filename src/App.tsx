@@ -151,7 +151,7 @@ function App() {
             <Summary entries={entries} projects={projects} />
 
             {/* Entry list */}
-            <TimeEntryList entries={entries} projects={projects} onDelete={deleteEntry} onUpdate={updateEntry} />
+            <TimeEntryList entries={entries} projects={projects} onDelete={deleteEntry} onUpdate={updateEntry} onAdd={addEntry} />
           </div>
         )}
       </main>
