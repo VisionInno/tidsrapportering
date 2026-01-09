@@ -17,7 +17,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    icon: path.join(__dirname, '../public/icon-512.svg'),
+    icon: path.join(__dirname, '../build/icon.png'),
   })
 
   // In development, load from Vite dev server
