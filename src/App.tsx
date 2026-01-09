@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { TimeEntryForm, TimeEntryList, Summary, ExportButton, ProjectManager, QuickTimer } from './components'
+import { TimeEntryForm, TimeEntryList, Summary, ExportButton, ProjectManager, QuickTimer, TodayEntries } from './components'
 import { useTimeEntries } from './hooks/useTimeEntries'
 import { useProjects } from './hooks/useProjects'
 import { useActiveTimer } from './hooks/useActiveTimer'
@@ -98,23 +98,33 @@ function App() {
       {/* Main content */}
       <main className="max-w-6xl mx-auto px-4 py-8">
         {activeTab === 'register' ? (
-          /* Register tab - QuickTimer and TimeEntryForm */
-          <div className="space-y-8">
-            {/* Quick Timer - Top 4 projects */}
-            <QuickTimer
-              projects={projects}
-              entries={entries}
-              activeTimer={activeTimer}
-              elapsedFormatted={elapsedFormatted}
-              isOverEightHours={isOverEightHours}
-              onStart={startTimer}
-              onStop={() => stopTimer(false)}
-              onDescriptionChange={updateDescription}
-            />
+          /* Register tab - QuickTimer, TimeEntryForm and Today's entries */
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left column - QuickTimer and Form */}
+            <div className="space-y-8">
+              {/* Quick Timer - Top 4 projects */}
+              <QuickTimer
+                projects={projects}
+                entries={entries}
+                activeTimer={activeTimer}
+                elapsedFormatted={elapsedFormatted}
+                isOverEightHours={isOverEightHours}
+                onStart={startTimer}
+                onStop={() => stopTimer(false)}
+                onDescriptionChange={updateDescription}
+              />
 
-            {/* Manual entry form */}
-            <div className="max-w-xl">
+              {/* Manual entry form */}
               <TimeEntryForm projects={projects} onSubmit={addEntry} />
+            </div>
+
+            {/* Right column - Today's entries */}
+            <div>
+              <TodayEntries
+                entries={entries}
+                projects={projects}
+                onDelete={deleteEntry}
+              />
             </div>
           </div>
         ) : (
