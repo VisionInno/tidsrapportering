@@ -1,71 +1,89 @@
 # Tidsrapportering
 
-En enkel och smidig app för personlig tidsspårning. Logga arbetstid, hantera projekt och exportera rapporter.
+En Windows desktop-app för personlig tidsspårning. Logga arbetstid med tidsintervall, hantera projekt och exportera fakturaunderlag.
 
+![Electron](https://img.shields.io/badge/Electron-39-blue)
 ![React](https://img.shields.io/badge/React-18-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-![Vite](https://img.shields.io/badge/Vite-5-purple)
-![Tailwind](https://img.shields.io/badge/Tailwind-3-teal)
+![SQLite](https://img.shields.io/badge/SQLite-3-green)
 
 ## Funktioner
 
-- **Tidsloggning** - Registrera timmar med datum, projekt och beskrivning
-- **Fakturering** - Markera tid som fakturerbar med valfritt timpris
-- **Projekthantering** - Skapa och organisera projekt med färgkodning
+### Tidsregistrering
+- **Snabbtimer** - Starta/stoppa timer för de mest använda projekten
+- **Tidsintervall** - Logga exakta tider (t.ex. 08:00-12:00, 13:00-17:00)
+- **Avrundning** - Minuter summeras per projekt och dag, avrundas uppåt till närmaste kvart
+- **Dagens översikt** - Se alla registreringar för dagen i realtid
+
+### Projekthantering
+- Skapa projekt med namn, färg och timpris
+- Färgkodning för enkel identifiering
+- Standardtimpris för fakturering
+
+### Översikt & Redigering
 - **Statistik** - Diagram över veckans timmar och projektfördelning
-- **Export** - Ladda ner rapporter som CSV (Excel) eller PDF
-- **Lokal lagring** - All data sparas i webbläsaren, inget konto krävs
+- **Redigera** - Ändra datum, tid, projekt och beskrivning på befintliga poster
+- **Lägg till** - Skapa nya poster direkt i översiktslistan
 
-## Kom igång
+### Export
+- **CSV** - För vidare bearbetning i Excel
+- **PDF Tidsrapport** - Detaljerad lista med alla poster
+- **Fakturaunderlag** - Per projekt med daglig nedbrytning och summering
+- **Periodval** - Senaste 7 dagar, denna månad, föregående månad eller anpassad period
 
-### Installation
+### Teknik
+- **Desktop-app** - Native Windows-app med Electron
+- **Lokal databas** - SQLite för pålitlig datalagring
+- **Offline** - Fungerar utan internetanslutning
+
+## Installation
+
+### Ladda ner installer
+Hämta senaste `Tidsrapportering Setup 1.0.0.exe` från [Releases](https://github.com/VisionInno/tidsrapportering/releases).
+
+### Eller bygg själv
 
 ```bash
 git clone https://github.com/VisionInno/tidsrapportering.git
 cd tidsrapportering
 npm install
+npm run dist:win
 ```
 
-### Starta appen
+Installern skapas i `release/`-mappen.
+
+## Utveckling
 
 ```bash
-npm run dev
+npm run dev              # Starta webbversion (localhost:5173)
+npm run dev:electron     # Starta Electron i dev-läge
+npm run build:electron   # Bygg för Electron
+npm run electron:start   # Starta byggd Electron-app
+npm run dist:win         # Bygg Windows-installer
+npm run typecheck        # Kontrollera TypeScript
+npm run lint             # Kör ESLint
 ```
-
-Öppna http://localhost:5173 i webbläsaren.
-
-### Bygg för produktion
-
-```bash
-npm run build
-```
-
-## Användning
-
-1. **Logga tid** - Fyll i formuläret till vänster med datum, projekt, beskrivning och timmar
-2. **Se statistik** - Överblick visas till höger med diagram och summering
-3. **Hantera projekt** - Klicka på "Projekt" för att skapa nya eller redigera
-4. **Exportera** - Klicka på "Exportera" för att ladda ner rapport
 
 ## Teknikstack
 
 | Komponent | Teknologi |
 |-----------|-----------|
+| Desktop | Electron 39 |
 | Frontend | React 18 + TypeScript |
+| Databas | SQLite (better-sqlite3) |
 | Styling | Tailwind CSS |
 | Diagram | Recharts |
 | Export | jsPDF, PapaParse |
-| Byggverktyg | Vite |
-| Lagring | localStorage |
+| Byggverktyg | Vite + electron-builder |
 
-## Utveckling
+## Datalagring
 
-```bash
-npm run dev        # Starta utvecklingsserver
-npm run typecheck  # Kontrollera TypeScript
-npm run lint       # Kör ESLint
-npm run format     # Formatera kod med Prettier
+Data sparas lokalt i:
 ```
+%APPDATA%/tidsrapportering/tidsrapportering.db
+```
+
+Databasen bevaras vid uppdateringar.
 
 ## Licens
 
