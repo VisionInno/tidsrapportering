@@ -12,7 +12,7 @@ function App() {
   const { migrating, migrationComplete } = useMigration()
   const [activeTab, setActiveTab] = useState<Tab>('register')
   const [viewMode, setViewMode] = useState<ViewMode>('week')
-  const { entries, addEntry, deleteEntry, loading: entriesLoading } = useTimeEntries()
+  const { entries, addEntry, updateEntry, deleteEntry, loading: entriesLoading } = useTimeEntries()
   const { projects, addProject, updateProject, deleteProject, loading: projectsLoading } = useProjects()
 
   const {
@@ -151,7 +151,7 @@ function App() {
             <Summary entries={entries} projects={projects} />
 
             {/* Entry list */}
-            <TimeEntryList entries={entries} projects={projects} onDelete={deleteEntry} />
+            <TimeEntryList entries={entries} projects={projects} onDelete={deleteEntry} onUpdate={updateEntry} />
           </div>
         )}
       </main>
