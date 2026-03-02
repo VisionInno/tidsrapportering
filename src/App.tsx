@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { TimeEntryForm, TimeEntryList, Summary, ExportButton, ProjectManager, QuickTimer, TodayEntries } from './components'
+import { useState, useMemo } from 'react'
+import { TimeEntryForm, TimeEntryList, Summary, ExportButton, ProjectManager, QuickTimer, TodayEntries, DataManager } from './components'
 import { useTimeEntries } from './hooks/useTimeEntries'
 import { useProjects } from './hooks/useProjects'
 import { useActiveTimer } from './hooks/useActiveTimer'
 import { useMigration } from './hooks/useMigration'
+import { getDateRangeForViewMode } from './utils/time'
 import type { ViewMode } from './types'
 
 type Tab = 'register' | 'overview'
@@ -12,8 +13,9 @@ function App() {
   const { migrating, migrationComplete } = useMigration()
   const [activeTab, setActiveTab] = useState<Tab>('register')
   const [viewMode, setViewMode] = useState<ViewMode>('week')
-  const { entries, addEntry, updateEntry, deleteEntry, loading: entriesLoading } = useTimeEntries()
-  const { projects, addProject, updateProject, deleteProject, loading: projectsLoading } = useProjects()
+  const [monthOffset, setMonthOffset] = useState(0)
+  const { entries, addEntry, updateEntry, deleteEntry, loading: entriesLoading, reload: reloadEntries } = useTimeEntries()
+  const { projects, addProject, updateProject, deleteProject, getEntriesCountForProject, loading: projectsLoading, reload: reloadProjects } = useProjects()
 
   const {
     activeTimer,
@@ -23,6 +25,12 @@ function App() {
     stopTimer,
     updateDescription,
   } = useActiveTimer({ onEntryCreated: addEntry })
+
+  // Filter entries based on viewMode
+  const dateRange = useMemo(() => getDateRangeForViewMode(viewMode, monthOffset), [viewMode, monthOffset])
+  const filteredEntries = useMemo(() => {
+    return entries.filter(e => e.date >= dateRange.start && e.date <= dateRange.end)
+  }, [entries, dateRange])
 
   // Show loading screen while migrating or loading data
   if (migrating || !migrationComplete || entriesLoading || projectsLoading) {
@@ -61,9 +69,15 @@ function App() {
               onAdd={addProject}
               onUpdate={updateProject}
               onDelete={deleteProject}
+              getEntriesCount={getEntriesCountForProject}
             />
             {activeTab === 'overview' && (
-              <ExportButton entries={entries} projects={projects} />
+              <>
+                <DataManager
+                  onDataImported={() => { reloadEntries(); reloadProjects() }}
+                />
+                <ExportButton entries={entries} projects={projects} />
+              </>
             )}
           </div>
         </div>
@@ -115,7 +129,7 @@ function App() {
               />
 
               {/* Manual entry form */}
-              <TimeEntryForm projects={projects} onSubmit={addEntry} />
+              <TimeEntryForm projects={projects} onSubmit={addEntry} activeTimerProjectId={activeTimer?.projectId} />
             </div>
 
             {/* Right column - Today's entries */}
@@ -135,7 +149,7 @@ function App() {
               {(['day', 'week', 'month'] as ViewMode[]).map((mode) => (
                 <button
                   key={mode}
-                  onClick={() => setViewMode(mode)}
+                  onClick={() => { setViewMode(mode); setMonthOffset(0) }}
                   className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                     viewMode === mode
                       ? 'bg-primary-600 text-white'
@@ -145,13 +159,44 @@ function App() {
                   {mode === 'day' ? 'Dag' : mode === 'week' ? 'Vecka' : 'Månad'}
                 </button>
               ))}
+
+              {viewMode === 'month' && (
+                <div className="flex items-center gap-1 ml-4">
+                  <button
+                    onClick={() => setMonthOffset(prev => prev - 1)}
+                    className="p-1.5 rounded-md bg-white text-gray-700 hover:bg-gray-50"
+                    title="Föregående månad"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <span className="text-sm text-gray-700 min-w-[120px] text-center capitalize">
+                    {dateRange.label}
+                  </span>
+                  <button
+                    onClick={() => setMonthOffset(prev => prev + 1)}
+                    disabled={monthOffset >= 0}
+                    className={`p-1.5 rounded-md ${
+                      monthOffset >= 0
+                        ? 'text-gray-300 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                    title="Nästa månad"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Summary */}
-            <Summary entries={entries} projects={projects} />
+            <Summary entries={filteredEntries} projects={projects} />
 
             {/* Entry list */}
-            <TimeEntryList entries={entries} projects={projects} onDelete={deleteEntry} onUpdate={updateEntry} onAdd={addEntry} />
+            <TimeEntryList entries={filteredEntries} projects={projects} onDelete={deleteEntry} onUpdate={updateEntry} onAdd={addEntry} />
           </div>
         )}
       </main>

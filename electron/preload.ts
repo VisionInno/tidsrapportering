@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld('api', {
     add: (project: Project): Promise<Project> => ipcRenderer.invoke('db:projects:add', project),
     update: (project: Project): Promise<Project> => ipcRenderer.invoke('db:projects:update', project),
     delete: (id: string): Promise<boolean> => ipcRenderer.invoke('db:projects:delete', id),
+    getEntriesCount: (projectId: string): Promise<number> => ipcRenderer.invoke('db:projects:getEntriesCount', projectId),
   },
 
   // Time Entries
@@ -60,6 +61,13 @@ contextBridge.exposeInMainWorld('api', {
     get: (): Promise<ActiveTimer | null> => ipcRenderer.invoke('db:timer:get'),
     save: (timer: ActiveTimer | null): Promise<ActiveTimer | null> => ipcRenderer.invoke('db:timer:save', timer),
     clear: (): Promise<boolean> => ipcRenderer.invoke('db:timer:clear'),
+  },
+
+  // Backup
+  backup: {
+    export: (): Promise<boolean> => ipcRenderer.invoke('db:backup:export'),
+    import: (): Promise<{ success: boolean; projectsImported?: number; entriesImported?: number; reason?: string }> =>
+      ipcRenderer.invoke('db:backup:import'),
   },
 
   // Migration

@@ -8,19 +8,20 @@ export function useTimeEntries() {
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    async function loadEntries() {
-      if (isElectron()) {
-        const api = getAPI()
-        const dbEntries = await api.entries.getAll()
-        setEntries(dbEntries)
-      } else {
-        setEntries(storage.getTimeEntries())
-      }
-      setLoading(false)
+  const loadEntries = useCallback(async () => {
+    if (isElectron()) {
+      const api = getAPI()
+      const dbEntries = await api.entries.getAll()
+      setEntries(dbEntries)
+    } else {
+      setEntries(storage.getTimeEntries())
     }
-    loadEntries()
+    setLoading(false)
   }, [])
+
+  useEffect(() => {
+    loadEntries()
+  }, [loadEntries])
 
   const addEntry = useCallback(
     async (entry: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -88,5 +89,6 @@ export function useTimeEntries() {
     deleteEntry,
     getEntriesByDate,
     getEntriesByDateRange,
+    reload: loadEntries,
   }
 }

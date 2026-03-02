@@ -8,9 +8,9 @@
   "scripts": {
     "dev": "vite",
     "dev:electron": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && npm run electron:dev\"",
-    "electron:dev": "cross-env NODE_ENV=development tsc -p tsconfig.electron.json && electron .",
+    "electron:dev": "cross-env NODE_ENV=development tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && electron .",
     "build": "tsc && vite build",
-    "build:electron": "cross-env ELECTRON=true npm run build && tsc -p tsconfig.electron.json",
+    "build:electron": "cross-env ELECTRON=true npm run build && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json",
     "electron:start": "electron .",
     "dist": "npm run build:electron && electron-builder",
     "dist:win": "npm run build:electron && electron-builder --win",

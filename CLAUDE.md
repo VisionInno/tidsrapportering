@@ -113,3 +113,39 @@ The app is in Swedish. Key terms:
 - Time intervals are rounded up to nearest 15 minutes
 - App works both as Electron desktop app and PWA in browser
 - First run in Electron migrates localStorage data to SQLite
+- **F12** öppnar DevTools även i produktionsbygget (för felsökning)
+
+## Changelog
+
+### 2025-02-03: Migration & Export improvements
+
+**Förbättrad migrationslogik** (`src/hooks/useMigration.ts`):
+- Migrationen jämför nu localStorage vs SQLite och kör om localStorage har mer data
+- Verifierar att SQLite faktiskt har datan innan localStorage rensas
+- Detaljerad loggning med `[Migration]` prefix för felsökning
+- Hanterar scenariot där användaren kört webversionen (`npm run dev`) efter tidigare migrering
+
+**Separata fakturaunderlag per projekt** (`src/utils/export.ts`, `src/components/ExportButton.tsx`):
+- Ny funktion `exportInvoicePDFPerProject()` skapar en PDF per projekt
+- Checkbox i export-dialogen: "Separata dokument per projekt"
+- Filnamn: `fakturaunderlag_ProjektNamn_YYYY-MM-DD_YYYY-MM-DD.pdf`
+
+**DevTools i produktion** (`electron/main.ts`):
+- F12 öppnar DevTools även i produktionsbygget
+
+---
+
+## TODO: Nästa session
+
+**Prioritet 1: Verifiera datamigrering**
+- [ ] Öppna appen och tryck F12 för att se konsol-loggar
+- [ ] Kolla `[Migration]` loggar - migrerades datan?
+- [ ] Om inte: undersök varför localStorage inte har data (kan vara att datan redan är i SQLite från tidigare)
+- [ ] Verifiera att tidsregistreringar visas korrekt
+
+**Prioritet 2: Testa ny export-funktion**
+- [ ] Testa "Separata dokument per projekt" i export-dialogen
+- [ ] Verifiera att varje projekt får sin egen PDF med korrekt innehåll
+
+**Känd issue:**
+- Datan visades inte vid senaste test - behöver undersökas med DevTools (F12)

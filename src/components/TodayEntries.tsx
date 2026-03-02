@@ -1,3 +1,5 @@
+import { format } from 'date-fns'
+import { sv } from 'date-fns/locale'
 import type { TimeEntry, Project } from '@/types'
 import { formatTimeInterval, calculateTotalMinutesFromIntervals, minutesToRoundedHours } from '@/utils/time'
 
@@ -49,7 +51,9 @@ export function TodayEntries({ entries, projects, onDelete }: TodayEntriesProps)
   if (sortedEntries.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-4">
-        <h3 className="text-sm font-medium text-gray-700 mb-3">Idag</h3>
+        <h3 className="text-sm font-medium text-gray-700 mb-3">
+          Idag - <span className="capitalize">{format(new Date(), 'EEEE d MMMM', { locale: sv })}</span>
+        </h3>
         <p className="text-gray-400 text-sm">Inga tidsposter registrerade idag</p>
       </div>
     )
@@ -58,7 +62,9 @@ export function TodayEntries({ entries, projects, onDelete }: TodayEntriesProps)
   return (
     <div className="bg-white rounded-lg shadow p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-gray-700">Idag</h3>
+        <h3 className="text-sm font-medium text-gray-700">
+            Idag - <span className="capitalize">{format(new Date(), 'EEEE d MMMM', { locale: sv })}</span>
+          </h3>
         <span className="text-sm font-semibold text-primary-600">
           Totalt: {totalHours.toFixed(2)} h
         </span>

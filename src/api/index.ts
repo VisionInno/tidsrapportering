@@ -7,6 +7,7 @@ export interface ElectronAPI {
     add: (project: Project) => Promise<Project>
     update: (project: Project) => Promise<Project>
     delete: (id: string) => Promise<boolean>
+    getEntriesCount: (projectId: string) => Promise<number>
   }
   entries: {
     getAll: () => Promise<TimeEntry[]>
@@ -18,6 +19,10 @@ export interface ElectronAPI {
     get: () => Promise<ActiveTimer | null>
     save: (timer: ActiveTimer | null) => Promise<ActiveTimer | null>
     clear: () => Promise<boolean>
+  }
+  backup: {
+    export: () => Promise<boolean>
+    import: () => Promise<{ success: boolean; projectsImported?: number; entriesImported?: number; reason?: string }>
   }
   migrate: {
     fromLocalStorage: (data: {

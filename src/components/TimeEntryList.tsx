@@ -79,9 +79,10 @@ export function TimeEntryList({ entries, projects, onDelete, onUpdate, onAdd }: 
 
   const startAdding = () => {
     setIsAdding(true)
+    const activeProjects = projects.filter(p => p.active)
     setNewEntry({
       time: '',
-      projectId: projects[0]?.id || '',
+      projectId: activeProjects[0]?.id || '',
       description: '',
       date: new Date().toISOString().split('T')[0],
     })
@@ -196,7 +197,7 @@ export function TimeEntryList({ entries, projects, onDelete, onUpdate, onAdd }: 
                   onChange={(e) => setNewEntry({ ...newEntry, projectId: e.target.value })}
                   className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
                 >
-                  {projects.map((p) => (
+                  {projects.filter(p => p.active).map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
@@ -283,9 +284,13 @@ export function TimeEntryList({ entries, projects, onDelete, onUpdate, onAdd }: 
                       onChange={(e) => setEditState({ ...editState, projectId: e.target.value })}
                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
                     >
-                      {projects.map((p) => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
+                      {projects
+                        .filter(p => p.active || p.id === editState.projectId)
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}{!p.active ? ' (inaktiv)' : ''}
+                          </option>
+                        ))}
                     </select>
                   ) : (
                     <div className="flex items-center">

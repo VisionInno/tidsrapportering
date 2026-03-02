@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, globalShortcut, dialog } from 'electron'
+import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { initDatabase, getDatabase } from './database/index.js'
@@ -33,6 +34,14 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null
+  })
+
+  // Allow DevTools in production with F12
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12') {
+      mainWindow?.webContents.toggleDevTools()
+      event.preventDefault()
+    }
   })
 }
 
@@ -71,6 +80,11 @@ function setupIPC() {
   ipcMain.handle('db:projects:delete', (_event, id: string) => {
     db.prepare('DELETE FROM projects WHERE id = ?').run(id)
     return true
+  })
+
+  ipcMain.handle('db:projects:getEntriesCount', (_event, projectId: string) => {
+    const result = db.prepare('SELECT COUNT(*) as count FROM time_entries WHERE projectId = ?').get(projectId) as { count: number }
+    return result.count
   })
 
   // Time Entries
@@ -182,6 +196,99 @@ function setupIPC() {
   ipcMain.handle('db:timer:clear', () => {
     db.prepare('DELETE FROM active_timer WHERE id = 1').run()
     return true
+  })
+
+  // Export all data to JSON file
+  ipcMain.handle('db:backup:export', async () => {
+    const result = await dialog.showSaveDialog(mainWindow!, {
+      title: 'Exportera backup',
+      defaultPath: `tidsrapportering_backup_${new Date().toISOString().split('T')[0]}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    })
+
+    if (result.canceled || !result.filePath) return false
+
+    const projects = db.prepare('SELECT * FROM projects').all()
+    const entries = db.prepare('SELECT * FROM time_entries').all() as any[]
+    const intervalStmt = db.prepare('SELECT startTime, endTime FROM time_intervals WHERE entryId = ?')
+
+    const entriesWithIntervals = entries.map(entry => ({
+      ...entry,
+      billable: Boolean(entry.billable),
+      timeIntervals: intervalStmt.all(entry.id) as { startTime: string; endTime: string }[]
+    }))
+
+    const backup = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      projects: projects.map((p: any) => ({ ...p, active: Boolean(p.active) })),
+      entries: entriesWithIntervals,
+    }
+
+    fs.writeFileSync(result.filePath, JSON.stringify(backup, null, 2), 'utf-8')
+    return true
+  })
+
+  // Import data from JSON file
+  ipcMain.handle('db:backup:import', async () => {
+    const result = await dialog.showOpenDialog(mainWindow!, {
+      title: 'Importera backup',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      properties: ['openFile'],
+    })
+
+    if (result.canceled || result.filePaths.length === 0) return { success: false, reason: 'cancelled' }
+
+    try {
+      const raw = fs.readFileSync(result.filePaths[0], 'utf-8')
+      const backup = JSON.parse(raw)
+
+      const projects = backup.projects || []
+      const entries = backup.entries || []
+
+      // Import projects (INSERT OR IGNORE to avoid duplicates)
+      const projectStmt = db.prepare(`
+        INSERT OR IGNORE INTO projects (id, name, client, color, defaultHourlyRate, active, createdAt)
+        VALUES (@id, @name, @client, @color, @defaultHourlyRate, @active, @createdAt)
+      `)
+      let projectsImported = 0
+      for (const project of projects) {
+        const changes = projectStmt.run({
+          ...project,
+          active: project.active ? 1 : 0,
+        })
+        if (changes.changes > 0) projectsImported++
+      }
+
+      // Import entries (INSERT OR IGNORE to avoid duplicates)
+      const entryStmt = db.prepare(`
+        INSERT OR IGNORE INTO time_entries (id, date, projectId, description, hours, billable, hourlyRate, createdAt, updatedAt)
+        VALUES (@id, @date, @projectId, @description, @hours, @billable, @hourlyRate, @createdAt, @updatedAt)
+      `)
+      const intervalStmtInsert = db.prepare(`
+        INSERT INTO time_intervals (entryId, startTime, endTime)
+        VALUES (?, ?, ?)
+      `)
+      let entriesImported = 0
+      for (const entry of entries) {
+        const changes = entryStmt.run({
+          ...entry,
+          billable: entry.billable ? 1 : 0,
+        })
+        if (changes.changes > 0) {
+          entriesImported++
+          if (entry.timeIntervals && entry.timeIntervals.length > 0) {
+            for (const interval of entry.timeIntervals) {
+              intervalStmtInsert.run(entry.id, interval.startTime, interval.endTime)
+            }
+          }
+        }
+      }
+
+      return { success: true, projectsImported, entriesImported }
+    } catch (error: any) {
+      return { success: false, reason: error.message }
+    }
   })
 
   // Migration from localStorage (called once from renderer)

@@ -122,3 +122,8 @@ export function clearAllLocalStorage(): void {
   localStorage.removeItem(STORAGE_KEYS.PROJECTS)
   localStorage.removeItem(STORAGE_KEYS.ACTIVE_TIMER)
 }
+
+export function getEntriesCountForProject(projectId: string): number {
+  const entries = getTimeEntries()
+  return entries.filter(e => e.projectId === projectId).length
+}

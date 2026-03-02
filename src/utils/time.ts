@@ -1,4 +1,4 @@
-import type { TimeInterval } from '@/types'
+import type { TimeInterval, ViewMode } from '@/types'
 
 /**
  * Rounds minutes up to nearest 15-minute interval
@@ -108,4 +108,39 @@ export function parseIntervalString(input: string): TimeInterval | null {
 export function getCurrentTime(): string {
   const now = new Date()
   return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+}
+
+/**
+ * Gets date range for the specified view mode
+ * Week starts on Monday (calendar week)
+ */
+export function getDateRangeForViewMode(viewMode: ViewMode, monthOffset = 0): { start: string; end: string; label: string } {
+  const today = new Date()
+  const todayStr = today.toISOString().split('T')[0]
+
+  switch (viewMode) {
+    case 'day':
+      return { start: todayStr, end: todayStr, label: 'Idag' }
+    case 'week': {
+      // Monday of this week (calendar week)
+      const weekStart = new Date(today)
+      const day = today.getDay()
+      const diff = today.getDate() - day + (day === 0 ? -6 : 1)
+      weekStart.setDate(diff)
+      return { start: weekStart.toISOString().split('T')[0], end: todayStr, label: 'Denna vecka' }
+    }
+    case 'month': {
+      const targetMonth = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1)
+      const monthStart = targetMonth.toISOString().split('T')[0]
+
+      // If viewing current month, end is today. Otherwise end of that month.
+      const isCurrentMonth = monthOffset === 0
+      const monthEnd = isCurrentMonth
+        ? todayStr
+        : new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).toISOString().split('T')[0]
+
+      const label = targetMonth.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })
+      return { start: monthStart, end: monthEnd, label }
+    }
+  }
 }

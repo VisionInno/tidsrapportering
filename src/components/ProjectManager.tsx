@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Project } from '@/types'
 
 interface ProjectManagerProps {
@@ -6,13 +6,38 @@ interface ProjectManagerProps {
   onAdd: (project: Omit<Project, 'id' | 'createdAt' | 'color'>) => void
   onUpdate: (id: string, updates: Partial<Project>) => void
   onDelete: (id: string) => void
+  getEntriesCount: (projectId: string) => Promise<number>
 }
 
-export function ProjectManager({ projects, onAdd, onUpdate, onDelete }: ProjectManagerProps) {
+export function ProjectManager({ projects, onAdd, onUpdate, onDelete, getEntriesCount }: ProjectManagerProps) {
   const [showModal, setShowModal] = useState(false)
   const [newName, setNewName] = useState('')
   const [newClient, setNewClient] = useState('')
   const [newRate, setNewRate] = useState('')
+
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editClient, setEditClient] = useState('')
+  const [editRate, setEditRate] = useState('')
+
+  // Track entries count per project
+  const [entriesCount, setEntriesCount] = useState<Map<string, number>>(new Map())
+
+  // Load entries count when modal opens
+  useEffect(() => {
+    if (showModal) {
+      const loadCounts = async () => {
+        const counts = new Map<string, number>()
+        for (const project of projects) {
+          const count = await getEntriesCount(project.id)
+          counts.set(project.id, count)
+        }
+        setEntriesCount(counts)
+      }
+      loadCounts()
+    }
+  }, [showModal, projects, getEntriesCount])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,6 +54,35 @@ export function ProjectManager({ projects, onAdd, onUpdate, onDelete }: ProjectM
     setNewClient('')
     setNewRate('')
     setShowModal(false)
+  }
+
+  const startEditing = (project: Project) => {
+    setEditingId(project.id)
+    setEditName(project.name)
+    setEditClient(project.client || '')
+    setEditRate(project.defaultHourlyRate?.toString() || '')
+  }
+
+  const cancelEditing = () => {
+    setEditingId(null)
+    setEditName('')
+    setEditClient('')
+    setEditRate('')
+  }
+
+  const saveEditing = (projectId: string) => {
+    if (!editName.trim()) return
+
+    onUpdate(projectId, {
+      name: editName.trim(),
+      client: editClient.trim() || undefined,
+      defaultHourlyRate: editRate ? parseFloat(editRate) : undefined,
+    })
+
+    setEditingId(null)
+    setEditName('')
+    setEditClient('')
+    setEditRate('')
   }
 
   return (
@@ -54,42 +108,112 @@ export function ProjectManager({ projects, onAdd, onUpdate, onDelete }: ProjectM
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Hantera projekt</h2>
 
             {/* Existing projects */}
-            <div className="space-y-2 mb-6 max-h-48 overflow-y-auto">
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  className="flex items-center justify-between p-2 rounded-md hover:bg-gray-50"
-                >
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-4 h-4 rounded-full"
-                      style={{ backgroundColor: project.color }}
-                    />
-                    <span className={project.active ? '' : 'text-gray-400 line-through'}>
-                      {project.name}
-                    </span>
-                    {project.client && (
-                      <span className="text-xs text-gray-500">({project.client})</span>
+            <div className="space-y-2 mb-6 max-h-64 overflow-y-auto">
+              {projects.map((project) => {
+                const count = entriesCount.get(project.id) || 0
+                const hasEntries = count > 0
+                const isEditing = editingId === project.id
+
+                return (
+                  <div
+                    key={project.id}
+                    className={`p-2 rounded-md ${isEditing ? 'bg-yellow-50 border border-yellow-200' : 'hover:bg-gray-50'}`}
+                  >
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-4 h-4 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: project.color }}
+                          />
+                          <input
+                            type="text"
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            placeholder="Projektnamn"
+                            className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 ml-6">
+                          <input
+                            type="text"
+                            value={editClient}
+                            onChange={(e) => setEditClient(e.target.value)}
+                            placeholder="Kund (valfritt)"
+                            className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          />
+                          <input
+                            type="number"
+                            value={editRate}
+                            onChange={(e) => setEditRate(e.target.value)}
+                            placeholder="Timpris"
+                            className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          />
+                        </div>
+                        <div className="flex justify-end gap-2 ml-6">
+                          <button
+                            onClick={() => saveEditing(project.id)}
+                            className="text-xs text-green-600 hover:text-green-800"
+                          >
+                            Spara
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            className="text-xs text-gray-500 hover:text-gray-700"
+                          >
+                            Avbryt
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: project.color }}
+                          />
+                          <div>
+                            <span className={project.active ? '' : 'text-gray-400 line-through'}>
+                              {project.name}
+                            </span>
+                            {project.client && (
+                              <span className="text-xs text-gray-500 ml-1">({project.client})</span>
+                            )}
+                            {project.defaultHourlyRate && (
+                              <span className="text-xs text-gray-400 ml-2">{project.defaultHourlyRate} kr/h</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => startEditing(project)}
+                            className="text-xs text-primary-500 hover:text-primary-700"
+                          >
+                            Redigera
+                          </button>
+                          <button
+                            onClick={() => onUpdate(project.id, { active: !project.active })}
+                            className="text-xs text-gray-500 hover:text-gray-700"
+                          >
+                            {project.active ? 'Inaktivera' : 'Aktivera'}
+                          </button>
+                          {hasEntries ? (
+                            <span className="text-xs text-gray-400">(har tidsposter)</span>
+                          ) : (
+                            <button
+                              onClick={() => onDelete(project.id)}
+                              className="text-xs text-red-500 hover:text-red-700"
+                            >
+                              Ta bort
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => onUpdate(project.id, { active: !project.active })}
-                      className="text-xs text-gray-500 hover:text-gray-700"
-                    >
-                      {project.active ? 'Inaktivera' : 'Aktivera'}
-                    </button>
-                    {project.id !== 'default' && (
-                      <button
-                        onClick={() => onDelete(project.id)}
-                        className="text-xs text-red-500 hover:text-red-700"
-                      >
-                        Ta bort
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             {/* Add new project form */}

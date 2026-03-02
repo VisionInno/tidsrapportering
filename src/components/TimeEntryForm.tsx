@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import type { Project, TimeEntry, TimeInterval } from '@/types'
 import {
@@ -13,11 +13,41 @@ interface TimeEntryFormProps {
   projects: Project[]
   onSubmit: (entry: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'>) => void
   initialDate?: string
+  activeTimerProjectId?: string
 }
 
-export function TimeEntryForm({ projects, onSubmit, initialDate }: TimeEntryFormProps) {
+const LAST_PROJECT_KEY = 'tidsrapportering_lastProjectId'
+
+function getInitialProjectId(projects: Project[], activeTimerProjectId?: string): string {
+  // Priority: active timer project > last used project > first active project
+  if (activeTimerProjectId) {
+    const exists = projects.some(p => p.id === activeTimerProjectId && p.active)
+    if (exists) return activeTimerProjectId
+  }
+
+  const saved = localStorage.getItem(LAST_PROJECT_KEY)
+  if (saved) {
+    const exists = projects.some(p => p.id === saved && p.active)
+    if (exists) return saved
+  }
+
+  const activeProjects = projects.filter(p => p.active)
+  return activeProjects[0]?.id || ''
+}
+
+export function TimeEntryForm({ projects, onSubmit, initialDate, activeTimerProjectId }: TimeEntryFormProps) {
   const [date, setDate] = useState(initialDate || format(new Date(), 'yyyy-MM-dd'))
-  const [projectId, setProjectId] = useState(projects[0]?.id || '')
+  const [projectId, setProjectId] = useState(() => getInitialProjectId(projects, activeTimerProjectId))
+  // Sync with active timer project when it changes
+  useEffect(() => {
+    if (activeTimerProjectId) {
+      const exists = projects.some(p => p.id === activeTimerProjectId && p.active)
+      if (exists) {
+        setProjectId(activeTimerProjectId)
+      }
+    }
+  }, [activeTimerProjectId, projects])
+
   const [description, setDescription] = useState('')
   const [inputMode, setInputMode] = useState<InputMode>('intervals')
   const [hours, setHours] = useState('')
@@ -75,7 +105,10 @@ export function TimeEntryForm({ projects, onSubmit, initialDate }: TimeEntryForm
       })
     }
 
-    // Reset form
+    // Remember selected project for next time
+    localStorage.setItem(LAST_PROJECT_KEY, projectId)
+
+    // Reset form (keep project selection)
     setDescription('')
     setHours('')
     setIntervals([])

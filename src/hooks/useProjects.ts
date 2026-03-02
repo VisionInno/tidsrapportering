@@ -19,19 +19,20 @@ export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    async function loadProjects() {
-      if (isElectron()) {
-        const api = getAPI()
-        const dbProjects = await api.projects.getAll()
-        setProjects(dbProjects)
-      } else {
-        setProjects(storage.getProjects())
-      }
-      setLoading(false)
+  const loadProjects = useCallback(async () => {
+    if (isElectron()) {
+      const api = getAPI()
+      const dbProjects = await api.projects.getAll()
+      setProjects(dbProjects)
+    } else {
+      setProjects(storage.getProjects())
     }
-    loadProjects()
+    setLoading(false)
   }, [])
+
+  useEffect(() => {
+    loadProjects()
+  }, [loadProjects])
 
   const addProject = useCallback(async (project: Omit<Project, 'id' | 'createdAt' | 'color'>) => {
     const currentProjects = isElectron() ? await getAPI().projects.getAll() : storage.getProjects()
@@ -80,6 +81,14 @@ export function useProjects() {
     return projects.filter((p) => p.active)
   }, [projects])
 
+  const getEntriesCountForProject = useCallback(async (projectId: string): Promise<number> => {
+    if (isElectron()) {
+      return await getAPI().projects.getEntriesCount(projectId)
+    } else {
+      return storage.getEntriesCountForProject(projectId)
+    }
+  }, [])
+
   return {
     projects,
     loading,
@@ -87,5 +96,7 @@ export function useProjects() {
     updateProject,
     deleteProject,
     getActiveProjects,
+    getEntriesCountForProject,
+    reload: loadProjects,
   }
 }

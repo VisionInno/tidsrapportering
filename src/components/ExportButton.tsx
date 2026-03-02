@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import type { TimeEntry, Project } from '@/types'
-import { exportToCSV, exportToPDF, exportInvoicePDF } from '@/utils/export'
+import { exportToCSV, exportToPDF, exportInvoicePDFPerProject } from '@/utils/export'
 
 type ExportType = 'csv' | 'pdf' | 'invoice'
 
@@ -60,7 +60,7 @@ export function ExportButton({ entries, projects }: ExportButtonProps) {
         exportToPDF(data)
         break
       case 'invoice':
-        exportInvoicePDF(data)
+        exportInvoicePDFPerProject(data)
         break
     }
 

@@ -1,4 +1,4 @@
-# Tidsrapportering - Kom igång
+﻿# Tidsrapportering - Kom igång
 
 ## Starta appen
 
