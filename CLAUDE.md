@@ -53,14 +53,29 @@ npm run build:electron # Build for Electron
 npm run dist:win       # Build Windows installer
 npm run typecheck      # Run TypeScript type check
 npm run lint           # Run ESLint
+npm run test           # Run all tests (104 tests)
+npm run test:watch     # Run tests in watch mode
+npm run verify         # typecheck + lint + test (all-in-one)
 ```
 
 ## Verification
 
-Before committing changes, run:
+Before committing changes, ALWAYS run:
 ```bash
-npm run typecheck && npm run lint
+npm run verify
 ```
+
+## Tests
+
+Tests use Vitest and are located in `__tests__/` folders next to the code they test:
+
+| Test file | What it tests |
+|-----------|--------------|
+| `src/utils/__tests__/time.test.ts` | Time calculations, rounding, parsing (58 tests) |
+| `src/utils/__tests__/storage.test.ts` | Data integrity, CRUD, cleanup (20 tests) |
+| `src/utils/__tests__/export-calculations.test.ts` | Billing rounding logic (5 tests) |
+| `src/hooks/__tests__/useTimeEntries.test.ts` | All registration methods (11 tests) |
+| `src/hooks/__tests__/useActiveTimer.test.ts` | Timer logic + regression tests (10 tests) |
 
 ## Key Files
 
@@ -117,35 +132,29 @@ The app is in Swedish. Key terms:
 
 ## Changelog
 
-### 2025-02-03: Migration & Export improvements
+### 2026-03-03: Major fixes and features
 
-**Förbättrad migrationslogik** (`src/hooks/useMigration.ts`):
-- Migrationen jämför nu localStorage vs SQLite och kör om localStorage har mer data
-- Verifierar att SQLite faktiskt har datan innan localStorage rensas
-- Detaljerad loggning med `[Migration]` prefix för felsökning
-- Hanterar scenariot där användaren kört webversionen (`npm run dev`) efter tidigare migrering
+**Electron preload-fix (KRITISK)**:
+- Preload-scriptet kompilerades som ESM men Electron kräver CommonJS i sandbox
+- Separat `tsconfig.preload.json` med `module: "CommonJS"`
+- **Detta var grundorsaken till att appen aldrig fungerade i produktionsläge**
 
-**Separata fakturaunderlag per projekt** (`src/utils/export.ts`, `src/components/ExportButton.tsx`):
-- Ny funktion `exportInvoicePDFPerProject()` skapar en PDF per projekt
-- Checkbox i export-dialogen: "Separata dokument per projekt"
-- Filnamn: `fakturaunderlag_ProjektNamn_YYYY-MM-DD_YYYY-MM-DD.pdf`
+**Per-projekt PDF-export**:
+- Faktureringsexport skapar alltid en separat PDF per projekt (inget val)
+- Tog bort den kombinerade `exportInvoicePDF`-funktionen
 
-**DevTools i produktion** (`electron/main.ts`):
-- F12 öppnar DevTools även i produktionsbygget
+**Månadsnavigering**:
+- Pilar för att bläddra mellan månader i översiktens månadsvy
+- `getDateRangeForViewMode` tar nu `monthOffset`-parameter
 
----
+**Smart projektval**:
+- Sparar senast använda projekt i localStorage
+- Synkar med aktiv timer via `activeTimerProjectId`-prop
 
-## TODO: Nästa session
+**Data import/backup**:
+- DataManager-komponent med export/import av JSON-backuper
+- IPC-handlers `db:backup:export` och `db:backup:import` i main.ts
 
-**Prioritet 1: Verifiera datamigrering**
-- [ ] Öppna appen och tryck F12 för att se konsol-loggar
-- [ ] Kolla `[Migration]` loggar - migrerades datan?
-- [ ] Om inte: undersök varför localStorage inte har data (kan vara att datan redan är i SQLite från tidigare)
-- [ ] Verifiera att tidsregistreringar visas korrekt
-
-**Prioritet 2: Testa ny export-funktion**
-- [ ] Testa "Separata dokument per projekt" i export-dialogen
-- [ ] Verifiera att varje projekt får sin egen PDF med korrekt innehåll
-
-**Känd issue:**
-- Datan visades inte vid senaste test - behöver undersökas med DevTools (F12)
+**Datamigrering**:
+- 221 poster och 4 projekt migrerade från LevelDB till SQLite
+- Data: 2026-01-07 till 2026-02-28

@@ -9,7 +9,7 @@ import { formatTimeInterval, calculateTotalMinutesFromIntervals, minutesToRounde
  * Calculate rounded hours per project per day, then sum totals
  * This is the core rounding logic used across the app
  */
-function calculateRoundedExportTotals(entries: TimeEntry[], projectMap: Map<string, Project>) {
+export function calculateRoundedExportTotals(entries: TimeEntry[], projectMap: Map<string, Project>) {
   // Group minutes by project+date
   const minutesByProjectDate = new Map<string, number>()
 

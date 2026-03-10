@@ -25,7 +25,7 @@ export function calculateIntervalMinutes(startTime: string, endTime: string): nu
 
 /**
  * Calculates hours from a time interval, rounding up to nearest 15 minutes
- * @deprecated Use calculateIntervalMinutes and round at summary level instead
+ * Note: Returns 0 if start === end (caller should enforce minimum if needed)
  */
 export function calculateIntervalHours(startTime: string, endTime: string): number {
   const diffMinutes = calculateIntervalMinutes(startTime, endTime)
@@ -111,12 +111,19 @@ export function getCurrentTime(): string {
 }
 
 /**
+ * Formats a Date as local YYYY-MM-DD string (avoids UTC timezone offset issues)
+ */
+function toLocalDateStr(date: Date): string {
+  return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
+}
+
+/**
  * Gets date range for the specified view mode
  * Week starts on Monday (calendar week)
  */
 export function getDateRangeForViewMode(viewMode: ViewMode, monthOffset = 0): { start: string; end: string; label: string } {
   const today = new Date()
-  const todayStr = today.toISOString().split('T')[0]
+  const todayStr = toLocalDateStr(today)
 
   switch (viewMode) {
     case 'day':
@@ -127,17 +134,17 @@ export function getDateRangeForViewMode(viewMode: ViewMode, monthOffset = 0): { 
       const day = today.getDay()
       const diff = today.getDate() - day + (day === 0 ? -6 : 1)
       weekStart.setDate(diff)
-      return { start: weekStart.toISOString().split('T')[0], end: todayStr, label: 'Denna vecka' }
+      return { start: toLocalDateStr(weekStart), end: todayStr, label: 'Denna vecka' }
     }
     case 'month': {
       const targetMonth = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1)
-      const monthStart = targetMonth.toISOString().split('T')[0]
+      const monthStart = toLocalDateStr(targetMonth)
 
       // If viewing current month, end is today. Otherwise end of that month.
       const isCurrentMonth = monthOffset === 0
       const monthEnd = isCurrentMonth
         ? todayStr
-        : new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).toISOString().split('T')[0]
+        : toLocalDateStr(new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0))
 
       const label = targetMonth.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })
       return { start: monthStart, end: monthEnd, label }

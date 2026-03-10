@@ -94,7 +94,9 @@ export function useActiveTimer({ onEntryCreated }: UseActiveTimerOptions) {
       const startTime = `${start.getHours().toString().padStart(2, '0')}:${start.getMinutes().toString().padStart(2, '0')}`
 
       // Calculate hours with rounding to nearest 15 min
-      const hours = calculateIntervalHours(startTime, endTime)
+      // Ensure minimum 15 min (0.25h) for any timer usage
+      const calculatedHours = calculateIntervalHours(startTime, endTime)
+      const hours = Math.max(calculatedHours, 0.25)
 
       let description = timer.description
       if (autoStopped) {
@@ -103,19 +105,24 @@ export function useActiveTimer({ onEntryCreated }: UseActiveTimerOptions) {
           : '[Automatiskt stoppad efter 12 timmar]'
       }
 
-      onEntryCreatedRef.current({
-        date: start.toISOString().split('T')[0],
-        projectId: timer.projectId,
-        description,
-        hours,
-        billable: true,
-        timeIntervals: [{ startTime, endTime }],
-      })
+      try {
+        await onEntryCreatedRef.current({
+          date: start.toISOString().split('T')[0],
+          projectId: timer.projectId,
+          description,
+          hours,
+          billable: true,
+          timeIntervals: [{ startTime, endTime }],
+        })
 
-      await clearTimer()
-      setActiveTimer(null)
-      setElapsedMs(0)
-      setWarningShown(false)
+        await clearTimer()
+        setActiveTimer(null)
+        setElapsedMs(0)
+        setWarningShown(false)
+      } catch (error) {
+        console.error('Fel vid sparning av tidspost:', error)
+        alert('Kunde inte spara tidposten. Timern är fortfarande aktiv. Försök stoppa igen.')
+      }
     },
     [clearTimer]
   )

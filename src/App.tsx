@@ -203,8 +203,11 @@ function App() {
 
       {/* Footer */}
       <footer className="bg-white border-t mt-auto">
-        <div className="max-w-6xl mx-auto px-4 py-4 text-center text-sm text-gray-500">
-          Tidsrapportering - Personlig tidsspårning
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between text-sm text-gray-500">
+          <span>Tidsrapportering - Personlig tidsspårning</span>
+          <span className="text-xs text-gray-400" title={__BUILD_TIMESTAMP__}>
+            v{new Date(__BUILD_TIMESTAMP__).toLocaleDateString('sv-SE')} {new Date(__BUILD_TIMESTAMP__).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+          </span>
         </div>
       </footer>
     </div>

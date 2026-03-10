@@ -9,6 +9,9 @@ const isElectron = process.env.ELECTRON === 'true'
 export default defineConfig({
   // Use relative paths for Electron
   base: isElectron ? './' : '/',
+  define: {
+    __BUILD_TIMESTAMP__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     // Only include PWA plugin when not building for Electron
