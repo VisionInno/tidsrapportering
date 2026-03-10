@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { ActiveTimer, TimeEntry } from '@/types'
 import * as storage from '@/utils/storage'
-import { calculateIntervalHours, getCurrentTime } from '@/utils/time'
+import { calculateIntervalHours, getCurrentTime, toLocalDateStr } from '@/utils/time'
 import { isElectron, getAPI } from '@/api'
 
 const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000
@@ -107,10 +107,11 @@ export function useActiveTimer({ onEntryCreated }: UseActiveTimerOptions) {
 
       try {
         await onEntryCreatedRef.current({
-          date: start.toISOString().split('T')[0],
+          date: toLocalDateStr(start),
           projectId: timer.projectId,
           description,
           hours,
+          hourlyRate: 0,
           billable: true,
           timeIntervals: [{ startTime, endTime }],
         })

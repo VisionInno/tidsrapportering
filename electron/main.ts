@@ -107,7 +107,8 @@ function setupIPC() {
     `)
     entryStmt.run({
       ...entry,
-      billable: entry.billable ? 1 : 0
+      billable: entry.billable ? 1 : 0,
+      hourlyRate: entry.hourlyRate ?? null
     })
 
     // Insert time intervals

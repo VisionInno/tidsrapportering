@@ -113,7 +113,7 @@ export function getCurrentTime(): string {
 /**
  * Formats a Date as local YYYY-MM-DD string (avoids UTC timezone offset issues)
  */
-function toLocalDateStr(date: Date): string {
+export function toLocalDateStr(date: Date): string {
   return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
 }
 
