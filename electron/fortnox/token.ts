@@ -36,7 +36,7 @@ export async function exchangeCodeForTokens(
     throw new Error(`Kunde inte hämta token från Fortnox: ${error}`)
   }
 
-  const data: TokenResponse = await response.json()
+  const data = await response.json() as TokenResponse
   saveTokens(db, data)
 }
 
@@ -83,7 +83,7 @@ async function refreshAccessToken(
     throw new Error(`Kunde inte förnya Fortnox-token: ${error}`)
   }
 
-  const data: TokenResponse = await response.json()
+  const data = await response.json() as TokenResponse
   saveTokens(db, data)
   return data.access_token
 }

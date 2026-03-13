@@ -67,13 +67,13 @@ export async function createFortnoxInvoice(
   return fortnoxFetch(token, '/invoices', {
     method: 'POST',
     body: JSON.stringify(payload),
-  })
+  }) as Promise<FortnoxInvoiceResponse>
 }
 
 export async function getFortnoxCustomers(
   token: string
 ): Promise<FortnoxCustomer[]> {
-  const data = await fortnoxFetch(token, '/customers?limit=500')
+  const data = await fortnoxFetch(token, '/customers?limit=500') as { Customers?: Record<string, string>[] }
   return (data.Customers || []).map((c: Record<string, string>) => ({
     CustomerNumber: c.CustomerNumber,
     Name: c.Name,
