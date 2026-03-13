@@ -27,6 +27,7 @@ interface Project {
   defaultHourlyRate?: number
   active: boolean
   createdAt: string
+  fortnoxCustomerNumber?: string
 }
 
 interface ActiveTimer {
@@ -74,6 +75,19 @@ contextBridge.exposeInMainWorld('api', {
   migrate: {
     fromLocalStorage: (data: { projects: Project[], entries: TimeEntry[], timer: ActiveTimer | null }): Promise<boolean> =>
       ipcRenderer.invoke('db:migrate:fromLocalStorage', data),
+  },
+
+  // Fortnox
+  fortnox: {
+    getConfig: (): Promise<any> => ipcRenderer.invoke('fortnox:config:get'),
+    saveCredentials: (clientId: string, clientSecret: string): Promise<boolean> =>
+      ipcRenderer.invoke('fortnox:credentials:save', clientId, clientSecret),
+    getSetting: (key: string): Promise<string | null> => ipcRenderer.invoke('fortnox:settings:get', key),
+    setSetting: (key: string, value: string): Promise<boolean> => ipcRenderer.invoke('fortnox:settings:set', key, value),
+    disconnect: (): Promise<boolean> => ipcRenderer.invoke('fortnox:disconnect'),
+    startAuth: (): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('fortnox:auth:start'),
+    listCustomers: (): Promise<any[]> => ipcRenderer.invoke('fortnox:customers:list'),
+    createInvoice: (payload: any): Promise<any> => ipcRenderer.invoke('fortnox:invoice:create', payload),
   },
 
   // Check if running in Electron

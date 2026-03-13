@@ -24,6 +24,7 @@ export interface Project {
   defaultHourlyRate?: number
   active: boolean
   createdAt: string
+  fortnoxCustomerNumber?: string
 }
 
 export interface DailySummary {

@@ -1,5 +1,20 @@
 # Session Log - Tidsrapportering
 
+## Session 2026-03-10
+### Completed
+- Fixed QuickTimer "Stoppa" button crash: missing `hourlyRate` in SQLite INSERT caused better-sqlite3 v12 `RangeError`
+- Fixed `toISOString()` timezone bug in timer date → `toLocalDateStr()`
+- Exported `toLocalDateStr` from time.ts
+- Built new Windows installer, pushed to GitHub (ff33b8d)
+
+### Current State
+- All 104 tests passing, typecheck + lint clean
+- New installer at `release\Tidsrapportering Setup 1.0.0.exe`
+
+### Next Session: Start Here
+- Install and verify fix in production Electron app
+- Consider looking up project's `defaultHourlyRate` for timer entries (currently 0)
+
 ## Session 2026-03-03
 
 ### Completed
@@ -59,13 +74,23 @@
 
 7. **Nytt verifieringskommando** - `npm run verify` kör typecheck + lint + test.
 
+### Commits
+- `dc92829` feat: Add test suite (104 tests) and fix timer/date bugs
+
 ### Current State
 - 104/104 tester passerar
 - Typecheck och lint godkända
-- `npm run verify` körs före varje commit
-- Appen har versionsnummer i footern
+- `npm run verify` körs före varje commit (typecheck + lint + test)
+- Appen har versionsnummer i footern (build-tidsstämpel)
+- Windows-installer byggd: `release\Tidsrapportering Setup 1.0.0.exe` (~101 MB)
+- Branch `main`, ej pushad till GitHub ännu
 
 ### Next Session: Start Here
-- Bygg ny Windows-installer (`npm run dist:win`) och installera
-- Verifiera att bugfixarna fungerar i Electron-produktion
-- Eventuellt: byta appikon
+1. **Installera och testa** - Kör installern, verifiera:
+   - Versionsnummer syns i footern
+   - Snabbtimer sparar poster korrekt (testa kort timer <1 min)
+   - Gammal data finns kvar efter uppdatering
+   - Felmeddelande visas om sparning misslyckas
+2. **Pusha till GitHub** - `git push`
+3. Eventuellt: byta appikon
+4. Eventuellt: städa bort temporära npm-paket från datamigrering

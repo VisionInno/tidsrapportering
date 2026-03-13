@@ -52,6 +52,21 @@ export function createSchema(db: Database.Database): void {
     )
   `)
 
+  // Settings table (key-value store for Fortnox credentials etc.)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `)
+
+  // Add fortnoxCustomerNumber column to projects (migration-safe)
+  try {
+    db.exec(`ALTER TABLE projects ADD COLUMN fortnoxCustomerNumber TEXT`)
+  } catch {
+    // Column already exists - ignore
+  }
+
   // Create indexes for better query performance
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_entries_date ON time_entries(date);

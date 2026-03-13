@@ -2,8 +2,13 @@ import { useState } from 'react'
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import type { TimeEntry, Project } from '@/types'
 import { exportToCSV, exportToPDF, exportInvoicePDFPerProject } from '@/utils/export'
+import { buildFortnoxPreviewData } from '@/utils/fortnox'
+import { useFortnoxSettings } from '@/hooks/useFortnoxSettings'
+import { isElectron } from '@/api'
+import { FortnoxInvoicePreview } from './FortnoxInvoicePreview'
+import type { FortnoxPreviewProject } from '@/utils/fortnox'
 
-type ExportType = 'csv' | 'pdf' | 'invoice'
+type ExportType = 'csv' | 'pdf' | 'invoice' | 'fortnox'
 
 interface ExportButtonProps {
   entries: TimeEntry[]
@@ -16,6 +21,9 @@ export function ExportButton({ entries, projects }: ExportButtonProps) {
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'prevMonth' | 'custom'>('month')
   const [customStart, setCustomStart] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
   const [customEnd, setCustomEnd] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'))
+  const [fortnoxPreviews, setFortnoxPreviews] = useState<FortnoxPreviewProject[] | null>(null)
+  const { isConnected, defaultAccount } = useFortnoxSettings()
+  const showFortnox = isElectron() && isConnected
 
   const getDateRange = () => {
     const today = new Date()
@@ -46,6 +54,12 @@ export function ExportButton({ entries, projects }: ExportButtonProps) {
     const range = getDateRange()
     const filteredEntries = entries.filter((e) => e.date >= range.start && e.date <= range.end)
 
+    if (exportType === 'fortnox') {
+      const previews = buildFortnoxPreviewData(filteredEntries, projects)
+      setFortnoxPreviews(previews)
+      return
+    }
+
     const data = {
       entries: filteredEntries,
       projects,
@@ -67,6 +81,11 @@ export function ExportButton({ entries, projects }: ExportButtonProps) {
     setShowModal(false)
   }
 
+  const closeModal = () => {
+    setShowModal(false)
+    setFortnoxPreviews(null)
+  }
+
   return (
     <>
       <button
@@ -86,98 +105,128 @@ export function ExportButton({ entries, projects }: ExportButtonProps) {
 
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Exportera tidsrapport</h2>
+          <div className={`bg-white rounded-lg shadow-xl p-6 w-full ${fortnoxPreviews !== null ? 'max-w-3xl' : 'max-w-md'}`}>
+            {fortnoxPreviews !== null ? (
+              <>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Fortnox – Fakturaunderlag</h2>
+                <FortnoxInvoicePreview
+                  previews={fortnoxPreviews}
+                  defaultAccount={defaultAccount}
+                  onClose={closeModal}
+                  onSent={closeModal}
+                />
+              </>
+            ) : (
+              <>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Exportera tidsrapport</h2>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Typ av export</label>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      value="invoice"
-                      checked={exportType === 'invoice'}
-                      onChange={(e) => setExportType(e.target.value as ExportType)}
-                      className="text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="ml-2 text-sm">Fakturaunderlag (PDF)</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      value="pdf"
-                      checked={exportType === 'pdf'}
-                      onChange={(e) => setExportType(e.target.value as ExportType)}
-                      className="text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="ml-2 text-sm">Detaljerad tidsrapport (PDF)</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      value="csv"
-                      checked={exportType === 'csv'}
-                      onChange={(e) => setExportType(e.target.value as ExportType)}
-                      className="text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="ml-2 text-sm">CSV (för Excel)</span>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Period</label>
-                <select
-                  value={dateRange}
-                  onChange={(e) => setDateRange(e.target.value as 'week' | 'month' | 'prevMonth' | 'custom')}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                >
-                  <option value="week">Senaste 7 dagarna</option>
-                  <option value="month">Denna månad</option>
-                  <option value="prevMonth">Föregående månad</option>
-                  <option value="custom">Anpassad period</option>
-                </select>
-              </div>
-
-              {dateRange === 'custom' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Från</label>
-                    <input
-                      type="date"
-                      value={customStart}
-                      onChange={(e) => setCustomStart(e.target.value)}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Typ av export</label>
+                    <div className="space-y-2">
+                      {showFortnox && (
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            value="fortnox"
+                            checked={exportType === 'fortnox'}
+                            onChange={(e) => setExportType(e.target.value as ExportType)}
+                            className="text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="ml-2 text-sm font-medium text-blue-700">Skicka till Fortnox</span>
+                        </label>
+                      )}
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="invoice"
+                          checked={exportType === 'invoice'}
+                          onChange={(e) => setExportType(e.target.value as ExportType)}
+                          className="text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="ml-2 text-sm">Fakturaunderlag (PDF)</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="pdf"
+                          checked={exportType === 'pdf'}
+                          onChange={(e) => setExportType(e.target.value as ExportType)}
+                          className="text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="ml-2 text-sm">Detaljerad tidsrapport (PDF)</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="csv"
+                          checked={exportType === 'csv'}
+                          onChange={(e) => setExportType(e.target.value as ExportType)}
+                          className="text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="ml-2 text-sm">CSV (för Excel)</span>
+                      </label>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Till</label>
-                    <input
-                      type="date"
-                      value={customEnd}
-                      onChange={(e) => setCustomEnd(e.target.value)}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
 
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
-              >
-                Avbryt
-              </button>
-              <button
-                onClick={handleExport}
-                className="px-4 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700"
-              >
-                Exportera
-              </button>
-            </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Period</label>
+                    <select
+                      value={dateRange}
+                      onChange={(e) => setDateRange(e.target.value as 'week' | 'month' | 'prevMonth' | 'custom')}
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    >
+                      <option value="week">Senaste 7 dagarna</option>
+                      <option value="month">Denna månad</option>
+                      <option value="prevMonth">Föregående månad</option>
+                      <option value="custom">Anpassad period</option>
+                    </select>
+                  </div>
+
+                  {dateRange === 'custom' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Från</label>
+                        <input
+                          type="date"
+                          value={customStart}
+                          onChange={(e) => setCustomStart(e.target.value)}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Till</label>
+                        <input
+                          type="date"
+                          value={customEnd}
+                          onChange={(e) => setCustomEnd(e.target.value)}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-3 mt-6">
+                  <button
+                    onClick={closeModal}
+                    className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
+                  >
+                    Avbryt
+                  </button>
+                  <button
+                    onClick={handleExport}
+                    className={`px-4 py-2 text-sm text-white rounded-md ${
+                      exportType === 'fortnox'
+                        ? 'bg-blue-600 hover:bg-blue-700'
+                        : 'bg-primary-600 hover:bg-primary-700'
+                    }`}
+                  >
+                    {exportType === 'fortnox' ? 'Visa förhandsgranskning' : 'Exportera'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

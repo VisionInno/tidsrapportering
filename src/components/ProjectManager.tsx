@@ -15,11 +15,14 @@ export function ProjectManager({ projects, onAdd, onUpdate, onDelete, getEntries
   const [newClient, setNewClient] = useState('')
   const [newRate, setNewRate] = useState('')
 
+  const [newFortnoxNr, setNewFortnoxNr] = useState('')
+
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editClient, setEditClient] = useState('')
   const [editRate, setEditRate] = useState('')
+  const [editFortnoxNr, setEditFortnoxNr] = useState('')
 
   // Track entries count per project
   const [entriesCount, setEntriesCount] = useState<Map<string, number>>(new Map())
@@ -48,11 +51,13 @@ export function ProjectManager({ projects, onAdd, onUpdate, onDelete, getEntries
       client: newClient.trim() || undefined,
       defaultHourlyRate: newRate ? parseFloat(newRate) : undefined,
       active: true,
+      fortnoxCustomerNumber: newFortnoxNr.trim() || undefined,
     })
 
     setNewName('')
     setNewClient('')
     setNewRate('')
+    setNewFortnoxNr('')
     setShowModal(false)
   }
 
@@ -61,6 +66,7 @@ export function ProjectManager({ projects, onAdd, onUpdate, onDelete, getEntries
     setEditName(project.name)
     setEditClient(project.client || '')
     setEditRate(project.defaultHourlyRate?.toString() || '')
+    setEditFortnoxNr(project.fortnoxCustomerNumber || '')
   }
 
   const cancelEditing = () => {
@@ -77,6 +83,7 @@ export function ProjectManager({ projects, onAdd, onUpdate, onDelete, getEntries
       name: editName.trim(),
       client: editClient.trim() || undefined,
       defaultHourlyRate: editRate ? parseFloat(editRate) : undefined,
+      fortnoxCustomerNumber: editFortnoxNr.trim() || undefined,
     })
 
     setEditingId(null)
@@ -151,6 +158,15 @@ export function ProjectManager({ projects, onAdd, onUpdate, onDelete, getEntries
                             className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
                           />
                         </div>
+                        <div className="ml-6">
+                          <input
+                            type="text"
+                            value={editFortnoxNr}
+                            onChange={(e) => setEditFortnoxNr(e.target.value)}
+                            placeholder="Fortnox kundnr (valfritt)"
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          />
+                        </div>
                         <div className="flex justify-end gap-2 ml-6">
                           <button
                             onClick={() => saveEditing(project.id)}
@@ -182,6 +198,9 @@ export function ProjectManager({ projects, onAdd, onUpdate, onDelete, getEntries
                             )}
                             {project.defaultHourlyRate && (
                               <span className="text-xs text-gray-400 ml-2">{project.defaultHourlyRate} kr/h</span>
+                            )}
+                            {project.fortnoxCustomerNumber && (
+                              <span className="text-xs text-blue-400 ml-2">FN: {project.fortnoxCustomerNumber}</span>
                             )}
                           </div>
                         </div>
@@ -227,7 +246,7 @@ export function ProjectManager({ projects, onAdd, onUpdate, onDelete, getEntries
                   placeholder="Projektnamn"
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <input
                     type="text"
                     value={newClient}
@@ -239,7 +258,14 @@ export function ProjectManager({ projects, onAdd, onUpdate, onDelete, getEntries
                     type="number"
                     value={newRate}
                     onChange={(e) => setNewRate(e.target.value)}
-                    placeholder="Timpris (valfritt)"
+                    placeholder="Timpris"
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  />
+                  <input
+                    type="text"
+                    value={newFortnoxNr}
+                    onChange={(e) => setNewFortnoxNr(e.target.value)}
+                    placeholder="Fortnox kundnr"
                     className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                   />
                 </div>

@@ -3,6 +3,11 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { initDatabase, getDatabase } from './database/index.js'
+import { getFortnoxConfig, saveFortnoxCredentials, clearAllFortnoxSettings, saveSetting, getSetting } from './fortnox/settings.js'
+import { startFortnoxAuth } from './fortnox/auth.js'
+import { getValidToken } from './fortnox/token.js'
+import { createFortnoxInvoice, getFortnoxCustomers } from './fortnox/api.js'
+import type { FortnoxInvoicePayload } from './fortnox/api.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -56,10 +61,10 @@ function setupIPC() {
 
   ipcMain.handle('db:projects:add', (_event, project) => {
     const stmt = db.prepare(`
-      INSERT INTO projects (id, name, client, color, defaultHourlyRate, active, createdAt)
-      VALUES (@id, @name, @client, @color, @defaultHourlyRate, @active, @createdAt)
+      INSERT INTO projects (id, name, client, color, defaultHourlyRate, active, createdAt, fortnoxCustomerNumber)
+      VALUES (@id, @name, @client, @color, @defaultHourlyRate, @active, @createdAt, @fortnoxCustomerNumber)
     `)
-    stmt.run(project)
+    stmt.run({ ...project, fortnoxCustomerNumber: project.fortnoxCustomerNumber ?? null })
     return project
   })
 
@@ -70,10 +75,11 @@ function setupIPC() {
         client = @client,
         color = @color,
         defaultHourlyRate = @defaultHourlyRate,
-        active = @active
+        active = @active,
+        fortnoxCustomerNumber = @fortnoxCustomerNumber
       WHERE id = @id
     `)
-    stmt.run(project)
+    stmt.run({ ...project, fortnoxCustomerNumber: project.fortnoxCustomerNumber ?? null })
     return project
   })
 
@@ -290,6 +296,50 @@ function setupIPC() {
     } catch (error: any) {
       return { success: false, reason: error.message }
     }
+  })
+
+  // Fortnox Settings
+  ipcMain.handle('fortnox:config:get', () => {
+    return getFortnoxConfig(db)
+  })
+
+  ipcMain.handle('fortnox:credentials:save', (_event, clientId: string, clientSecret: string) => {
+    saveFortnoxCredentials(db, clientId, clientSecret)
+    return true
+  })
+
+  ipcMain.handle('fortnox:settings:get', (_event, key: string) => {
+    return getSetting(db, key)
+  })
+
+  ipcMain.handle('fortnox:settings:set', (_event, key: string, value: string) => {
+    saveSetting(db, key, value)
+    return true
+  })
+
+  ipcMain.handle('fortnox:disconnect', () => {
+    clearAllFortnoxSettings(db)
+    return true
+  })
+
+  // Fortnox Auth
+  ipcMain.handle('fortnox:auth:start', async () => {
+    const config = getFortnoxConfig(db)
+    if (!config.clientId || !config.clientSecret) {
+      return { success: false, error: 'Ange Client ID och Client Secret först' }
+    }
+    return startFortnoxAuth(db, config.clientId, config.clientSecret)
+  })
+
+  // Fortnox API
+  ipcMain.handle('fortnox:customers:list', async () => {
+    const token = await getValidToken(db)
+    return getFortnoxCustomers(token)
+  })
+
+  ipcMain.handle('fortnox:invoice:create', async (_event, payload: FortnoxInvoicePayload) => {
+    const token = await getValidToken(db)
+    return createFortnoxInvoice(token, payload)
   })
 
   // Migration from localStorage (called once from renderer)

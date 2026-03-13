@@ -1,5 +1,46 @@
 import type { TimeEntry, Project, ActiveTimer } from '@/types'
 
+export interface FortnoxConfig {
+  clientId: string | null
+  clientSecret: string | null
+  hasTokens: boolean
+  tokenExpiresAt: string | null
+}
+
+export interface FortnoxCustomer {
+  CustomerNumber: string
+  Name: string
+  OrganisationNumber?: string
+  City?: string
+}
+
+export interface FortnoxInvoiceRow {
+  AccountNumber: number
+  Description: string
+  DeliveredQuantity: number
+  Price: number
+  Unit: string
+}
+
+export interface FortnoxInvoicePayload {
+  Invoice: {
+    CustomerNumber: string
+    InvoiceDate?: string
+    DueDate?: string
+    OurReference?: string
+    InvoiceRows: FortnoxInvoiceRow[]
+  }
+}
+
+export interface FortnoxInvoiceResponse {
+  Invoice: {
+    DocumentNumber: string
+    CustomerNumber: string
+    Total: number
+    InvoiceDate: string
+  }
+}
+
 // Type definition for the API exposed by Electron preload
 export interface ElectronAPI {
   projects: {
@@ -30,6 +71,16 @@ export interface ElectronAPI {
       entries: TimeEntry[]
       timer: ActiveTimer | null
     }) => Promise<boolean>
+  }
+  fortnox: {
+    getConfig: () => Promise<FortnoxConfig>
+    saveCredentials: (clientId: string, clientSecret: string) => Promise<boolean>
+    getSetting: (key: string) => Promise<string | null>
+    setSetting: (key: string, value: string) => Promise<boolean>
+    disconnect: () => Promise<boolean>
+    startAuth: () => Promise<{ success: boolean; error?: string }>
+    listCustomers: () => Promise<FortnoxCustomer[]>
+    createInvoice: (payload: FortnoxInvoicePayload) => Promise<FortnoxInvoiceResponse>
   }
   isElectron: boolean
 }
