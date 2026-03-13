@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { TimeEntryForm, TimeEntryList, Summary, ExportButton, ProjectManager, QuickTimer, TodayEntries, DataManager } from './components'
 import { useTimeEntries } from './hooks/useTimeEntries'
 import { useProjects } from './hooks/useProjects'
 import { useActiveTimer } from './hooks/useActiveTimer'
 import { useMigration } from './hooks/useMigration'
 import { getDateRangeForViewMode } from './utils/time'
-import type { ViewMode } from './types'
+import type { ViewMode, TimeEntry } from './types'
 
 type Tab = 'register' | 'overview'
 
@@ -17,6 +17,17 @@ function App() {
   const { entries, addEntry, updateEntry, deleteEntry, loading: entriesLoading, reload: reloadEntries } = useTimeEntries()
   const { projects, addProject, updateProject, deleteProject, getEntriesCountForProject, loading: projectsLoading, reload: reloadProjects } = useProjects()
 
+  const addEntryWithRate = useCallback(
+    (entry: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'>) => {
+      const project = projects.find(p => p.id === entry.projectId)
+      return addEntry({
+        ...entry,
+        hourlyRate: entry.hourlyRate || project?.defaultHourlyRate || 0,
+      })
+    },
+    [addEntry, projects]
+  )
+
   const {
     activeTimer,
     elapsedFormatted,
@@ -24,7 +35,7 @@ function App() {
     startTimer,
     stopTimer,
     updateDescription,
-  } = useActiveTimer({ onEntryCreated: addEntry })
+  } = useActiveTimer({ onEntryCreated: addEntryWithRate })
 
   // Filter entries based on viewMode
   const dateRange = useMemo(() => getDateRangeForViewMode(viewMode, monthOffset), [viewMode, monthOffset])
