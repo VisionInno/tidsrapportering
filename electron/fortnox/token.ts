@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3'
-import { getSetting, saveSecureSetting, saveSetting, getSecureSetting } from './settings'
+import { getSetting, saveSecureSetting, saveSetting, getSecureSetting } from './settings.js'
 
 const TOKEN_URL = 'https://apps.fortnox.se/oauth-v1/token'
 

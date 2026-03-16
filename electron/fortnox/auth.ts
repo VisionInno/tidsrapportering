@@ -1,6 +1,6 @@
 import { BrowserWindow } from 'electron'
 import type Database from 'better-sqlite3'
-import { exchangeCodeForTokens } from './token'
+import { exchangeCodeForTokens } from './token.js'
 
 const AUTH_URL = 'https://apps.fortnox.se/oauth-v1/auth'
 const REDIRECT_URI = 'http://localhost'
