@@ -16,6 +16,7 @@ export function useActiveTimer({ onEntryCreated }: UseActiveTimerOptions) {
   const [elapsedMs, setElapsedMs] = useState(0)
   const [warningShown, setWarningShown] = useState(false)
   const intervalRef = useRef<number | null>(null)
+  const isAutoStoppingRef = useRef(false)
   const onEntryCreatedRef = useRef(onEntryCreated)
   onEntryCreatedRef.current = onEntryCreated
 
@@ -140,9 +141,12 @@ export function useActiveTimer({ onEntryCreated }: UseActiveTimerOptions) {
       setActiveTimer(updated)
     }
 
-    // 12h auto-stop
-    if (elapsedMs >= TWELVE_HOURS_MS) {
-      createEntryAndClear(activeTimer, true)
+    // 12h auto-stop (guard prevents duplicate entries from rapid re-fires)
+    if (elapsedMs >= TWELVE_HOURS_MS && !isAutoStoppingRef.current) {
+      isAutoStoppingRef.current = true
+      createEntryAndClear(activeTimer, true).finally(() => {
+        isAutoStoppingRef.current = false
+      })
     }
   }, [elapsedMs, activeTimer, warningShown, createEntryAndClear, saveTimer])
 

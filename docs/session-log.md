@@ -1,5 +1,40 @@
 # Session Log - Tidsrapportering
 
+## Session 2026-03-13
+### Completed
+1. **hourlyRate-fix** - Timer-poster får nu projektets `defaultHourlyRate` istället för 0 (wrapper i App.tsx)
+2. **Städat paket** - Tog bort `sharp` och `electron-devtools-installer` (oanvända)
+3. **Fortnox-integration** - Komplett fakturaflöde:
+   - OAuth2-inloggning via BrowserWindow
+   - Krypterad tokenlagring (Electron safeStorage)
+   - Fortnox kundnummer-fält per projekt
+   - Inställnings-UI (kugghjulsikon i header)
+   - Fakturaförhandsvisning med redigerbara beskrivningar
+   - "Skicka till Fortnox"-knapp som skapar fakturor via API
+   - Ny exporttyp i exportdialogen (visas bara om ansluten)
+
+### Nya filer
+- `electron/fortnox/` - settings.ts, auth.ts, token.ts, api.ts
+- `src/components/` - FortnoxSettings.tsx, FortnoxInvoicePreview.tsx
+- `src/hooks/useFortnoxSettings.ts`
+- `src/utils/fortnox.ts`
+
+### Commits
+- `66b0c6a` fix: hourlyRate + remove unused packages
+- `bc1a2d3` feat: Add Fortnox invoice integration
+- `9ad9b0b` fix: TypeScript strict type assertions
+
+### Current State
+- 104/104 tester, typecheck + lint OK
+- Installer byggd: `release\Tidsrapportering Setup 1.0.0.exe`
+- Pushat till GitHub
+
+### Next Session: Start Here
+- Installera och testa Fortnox-flödet med riktiga API-nycklar
+- Ange Fortnox kundnummer på projekten (Synergy, Tenant merger, etc.)
+- Testa fakturaförhandsvisning + sändning
+- Eventuellt: byta appikon
+
 ## Session 2026-03-10
 ### Completed
 - Fixed QuickTimer "Stoppa" button crash: missing `hourlyRate` in SQLite INSERT caused better-sqlite3 v12 `RangeError`

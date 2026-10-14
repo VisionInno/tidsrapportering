@@ -30,3 +30,7 @@ nul
 # Local testing
 coverage/
 ~$*
+
+*.env
+
+local.settings.json

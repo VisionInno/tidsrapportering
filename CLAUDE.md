@@ -121,6 +121,16 @@ The app is in Swedish. Key terms:
 - Timmar = Hours
 - Projekt = Project
 
+## Electron Build Rules (CRITICAL)
+
+The `electron/` folder uses ESM (`tsconfig.electron.json`). Two rules that MUST be followed:
+
+1. **All relative imports in `electron/` MUST use `.js` extension** — e.g. `import { foo } from './bar.js'`, NOT `'./bar'`. Without `.js`, the compiled JS fails at runtime with `ERR_MODULE_NOT_FOUND`. This applies to all files under `electron/` including subdirectories.
+
+2. **`electron/preload.ts` MUST be compiled as CommonJS** — it uses a separate `tsconfig.preload.json` with `module: "CommonJS"`. Electron's sandbox requires CommonJS for preload scripts.
+
+These are the two most common causes of "app works in dev but crashes in production".
+
 ## Development Notes
 
 - Path alias `@/*` maps to `src/*`
@@ -129,6 +139,7 @@ The app is in Swedish. Key terms:
 - App works both as Electron desktop app and PWA in browser
 - First run in Electron migrates localStorage data to SQLite
 - **F12** öppnar DevTools även i produktionsbygget (för felsökning)
+- **better-sqlite3**: Named SQL parameters (`@field`) throw if the property is missing/undefined on the bound object — always default to `null` explicitly
 
 ## Changelog
 
